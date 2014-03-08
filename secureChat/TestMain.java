@@ -1,11 +1,11 @@
 package secureChat;
 import java.util.*;
 
-
-public class SecureChatMain {
+public class TestMain {
 
 	public static void main(String[] args) {
-		System.out.println("top top secret");
+		System.out.println("is this going to work?");
+
 	}
 
 }
