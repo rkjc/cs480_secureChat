@@ -17,6 +17,7 @@ import java.net.Socket;
 import java.util.HashSet;
 
 /**
+ * 
  * A multithreaded chat room server.  When a client connects the
  * server requests a screen name by sending the client the
  * text "SUBMITNAME", and keeps requesting a name until

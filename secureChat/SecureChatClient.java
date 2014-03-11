@@ -16,6 +16,7 @@ import javax.swing.JTextArea;
 import javax.swing.JTextField;
 
 /**
+ * 
  * A simple Swing-based client for the chat server.  Graphically
  * it is a frame with a text field for entering messages and a
  * textarea to see the whole dialog.
