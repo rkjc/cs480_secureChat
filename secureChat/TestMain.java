@@ -1,6 +1,7 @@
 package secureChat;
 import java.util.*; 
 import java.math.*;
+import java.nio.charset.Charset;
 
 import javax.xml.bind.DatatypeConverter;
 
@@ -17,21 +18,34 @@ public class TestMain {
 		int len = testString.length();
 		
 		//convert string to be sent to byte form
-		byte[] byteMessage = testString.getBytes();
+		byte[] byteMessage = new byte[128];
+		System.out.println(byteMessage.length);
+		byteMessage = testString.getBytes();	
 		System.out.println(byteMessage);
 		System.out.println(byteMessage.length);
+		int messLen = byteMessage.length;
+		//encrypt-decrypt using byte[]
+		
+		byte[] bkey = DatatypeConverter.parseHexBinary("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF");
+		byte[] cypherByteMessage = new byte[byteMessage.length];
+		for(int i = 0; i < messLen -1; i++)
+		{			
+			cypherByteMessage[i] = (byte) ((byteMessage[i] ^ bkey[i]) & 0xFF);
+			System.out.println(i + "  " + byteMessage[i] + "  " + bkey[i] +  "  " +  cypherByteMessage[i] );
+		}
+		cypherByteMessage[messLen -1] = (byte) (byteMessage[messLen -1] ^  0xFF);
+		System.out.println("");
 		
 		//convert byte to BigInteger for encryption
 		BigInteger bintMessage = new BigInteger(byteMessage);
 		System.out.println(bintMessage);
 		
 		//simulated encryption key
-		byte[] bkey = DatatypeConverter.parseHexBinary("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF");
-		BigInteger bikey = new BigInteger(bkey);
+		
 		// using bikey causes decryption problems, probably because of sign bit in BigInteger
 		System.out.println(bkey.length);
 		BigInteger key = new BigInteger("123456789");
-	
+		BigInteger bikey = new BigInteger(bkey);
 		//encrypted
 		BigInteger cypherIntOut = bintMessage.xor(key);
 		
@@ -39,6 +53,9 @@ public class TestMain {
 		byte[] cypherByteOut = cypherIntOut.toByteArray();
 		System.out.println(cypherByteOut.length);
 		String cypherTxt = new String(cypherByteOut);
+		
+		//byte to string ver
+		String cypherTxt2 = new String(cypherByteMessage);
 		
 		// this is then sent through chat channel
 		
@@ -55,7 +72,55 @@ public class TestMain {
 		String printString = new String(printBytes);
 		System.out.println(printString);
 		
+		//alt pure byte version;
+		byte[] cypherByteIn2 = cypherTxt2.getBytes();
+		byte[] cypherByteMessageIn = new byte[cypherByteIn2.length];;
+		for(int i = 0; i < messLen - 1; i++)
+		{			
+			cypherByteMessageIn[i] = (byte) ((cypherByteIn2[i] ^ bkey[i]));
+			System.out.println(i + "  " + cypherByteIn2[i] + "  " + bkey[i] +  "  " +  cypherByteMessageIn[i] );
+		}
+		cypherByteMessageIn[messLen -1] = (byte) ((cypherByteIn2[messLen -1] ^ 0x00));
 		
+		String printString2 = new String(cypherByteMessageIn);
+		System.out.println(printString2);
+		
+		
+		
+		
+		//##################################
+		
+		
+		String plainText = "hello world, there are sheep";
+		Charset charSet = Charset.forName("UTF-8");
+		byte[] plainBytes = plainText.getBytes(charSet);
+		//String key3 = "secret";
+		//byte[] keyBytes = key3.getBytes(charSet);
+		byte[] keyBytes = bkey;
+		
+
+		byte[] cipherBytes = new byte[plainBytes.length];
+		for (int i = 0; i < plainBytes.length; i++) {
+
+		    cipherBytes[i] = (byte) ((plainBytes[i] ^ keyBytes[i]) & 0xFF); //  % keyBytes.length]);
+		}
+		String cipherText = new String(cipherBytes);
+		System.out.println(cipherText);
+
+		
+		//To decrypt just reverse the process.
+		
+		//byte[] cipherBytes2 = cipherText.getBytes(charSet);
+		//String plainText2 = new String(cipherBytes2, charSet);
+		//System.out.println(plainText2);
+
+		// decode
+		for (int i = 0; i < cipherBytes.length; i++) {
+
+		    plainBytes[i] = (byte) (cipherBytes[i] ^ keyBytes[i]); // % keyBytes.length]);
+		}
+		String plainText3 = new String(plainBytes, charSet);
+		System.out.println(plainText3);
 		
 	}
 

@@ -101,9 +101,12 @@ public class SecureChatClient {
         // Make connection and initialize streams
         String serverAddress = getServerAddress();
         Socket socket = new Socket(serverAddress, 9001);
+        
         in = new BufferedReader(new InputStreamReader(
             socket.getInputStream()));
         out = new PrintWriter(socket.getOutputStream(), true);
+        
+        
 
         // Process all messages from server, according to the protocol.
         while (true) {
