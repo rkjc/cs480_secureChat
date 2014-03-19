@@ -4,6 +4,8 @@ package secureChat;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.BufferedReader;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
@@ -16,6 +18,7 @@ import javax.swing.JTextArea;
 import javax.swing.JTextField;
 
 /**
+ * 
  * 
  * A simple Swing-based client for the chat server.  Graphically
  * it is a frame with a text field for entering messages and a
@@ -36,6 +39,10 @@ public class SecureChatClient {
 
     BufferedReader in;
     PrintWriter out;
+    
+    private DataInputStream dIn;
+	private DataOutputStream dOut;
+	
     JFrame frame = new JFrame("Chatter");
     JTextField textField = new JTextField(40);
     JTextArea messageArea = new JTextArea(8, 40);
@@ -66,6 +73,7 @@ public class SecureChatClient {
              */
             public void actionPerformed(ActionEvent e) {
                 out.println(textField.getText());
+                
                 textField.setText("");
             }
         });
@@ -75,11 +83,11 @@ public class SecureChatClient {
      * Prompt for and return the address of the server.
      */
     private String getServerAddress() {
-        return JOptionPane.showInputDialog(
+        return (String) JOptionPane.showInputDialog(
             frame,
             "Enter IP Address of the Server:",
             "Welcome to the Chatter",
-            JOptionPane.QUESTION_MESSAGE);
+            JOptionPane.QUESTION_MESSAGE,null,null,"localhost");
     }
 
     /**
@@ -101,6 +109,7 @@ public class SecureChatClient {
         // Make connection and initialize streams
         String serverAddress = getServerAddress();
         Socket socket = new Socket(serverAddress, 9001);
+        Socket socket2 = new Socket(serverAddress, 9002);
         
         in = new BufferedReader(new InputStreamReader(
             socket.getInputStream()));
@@ -111,6 +120,7 @@ public class SecureChatClient {
         // Process all messages from server, according to the protocol.
         while (true) {
             String line = in.readLine();
+            System.out.println(line);
             if (line.startsWith("SUBMITNAME")) {
                 out.println(getName());
             } else if (line.startsWith("NAMEACCEPTED")) {
