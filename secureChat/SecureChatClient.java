@@ -72,9 +72,23 @@ public class SecureChatClient {
              * the text area in preparation for the next message.
              */
             public void actionPerformed(ActionEvent e) {
-                out.println(textField.getText());
-                
-                textField.setText("");
+                //out.println(textField.getText());
+                //String str = textField.getText();
+                             
+               byte[] b = (textField.getText()).getBytes();
+               textField.setText("");
+             
+                try {
+                	System.out.println("writing int byte.length");
+					dOut.writeInt(0);
+					System.out.println("writing byte");
+					dOut.write(b);
+					System.out.println("byte done write");
+				} catch (IOException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				} // write length of the message  
+               
             }
         });
     }
@@ -115,10 +129,12 @@ public class SecureChatClient {
             socket.getInputStream()));
         out = new PrintWriter(socket.getOutputStream(), true);
         
-        
+        dIn = new DataInputStream(socket.getInputStream());
+        dOut = new DataOutputStream(socket.getOutputStream());
 
         // Process all messages from server, according to the protocol.
         while (true) {
+        	System.out.println("client waiting for in.readLine()");
             String line = in.readLine();
             System.out.println(line);
             if (line.startsWith("SUBMITNAME")) {

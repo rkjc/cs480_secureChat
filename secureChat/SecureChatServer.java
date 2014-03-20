@@ -62,6 +62,8 @@ public class SecureChatServer {
 	 * The application main method, which just listens on a port and spawns
 	 * handler threads.
 	 */
+	
+	/*
 	public static void main(String[] args) throws Exception {
 		System.out.println("The chat server is running.");
 		ServerSocket listener = new ServerSocket(PORT);
@@ -74,6 +76,7 @@ public class SecureChatServer {
 			listener.close();
 		}
 	}
+	*/
 
 	/**
 	 * A handler thread class. Handlers are spawned from the listening loop and
@@ -146,22 +149,29 @@ public class SecureChatServer {
 				// this client can receive broadcast messages.
 				out.println("NAMEACCEPTED");
 				writers.add(out);
-
+				System.out.println("writer has been added");
 				// Accept messages from this client and broadcast them.
 				// Ignore other clients that cannot be broadcasted to.
 				while (true) {
-					String input = in.readLine();
+					System.out.println("server waiting for in.readLine()");
+					//String input = in.readLine();
 					System.out.println("got string");
+					System.out.println("server waiting for dIn.readInt()");
 					int length = dIn.readInt();
-					System.out.println("got byte");
+					System.out.println("got int length");
 					
+					/*
 					if (input != null) {
 						
 						for (PrintWriter writer : writers) {
 							writer.println("MESSAGE " + name + ": " + input);
 							System.out.println("MESSAGE " + name + ": " + input);
 						}
-					} else if (length > 0) {
+					} 
+					
+					else 
+					*/
+					if (length > 0) {
 						//read the byte array
 						byte[] message = new byte[length];
 						dIn.readFully(message, 0, message.length); 
@@ -173,7 +183,8 @@ public class SecureChatServer {
 							dWriter.write(message);           // write the message
 						}
 					}
-
+					
+					
 					return;
 				}
 			} catch (IOException e) {
