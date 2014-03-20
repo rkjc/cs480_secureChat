@@ -1,13 +1,14 @@
 
 package secureChat;
-
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.BufferedReader;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.Socket;
 
@@ -18,8 +19,6 @@ import javax.swing.JTextArea;
 import javax.swing.JTextField;
 
 /**
- * 
- * 
  * A simple Swing-based client for the chat server.  Graphically
  * it is a frame with a text field for entering messages and a
  * textarea to see the whole dialog.
@@ -37,16 +36,27 @@ import javax.swing.JTextField;
  */
 public class SecureChatClient {
 
-    BufferedReader in;
-    PrintWriter out;
+    //BufferedReader in;
+    //PrintWriter out;
+    DataOutputStream dos;
+    private DataInputStream dis;
     
-    private DataInputStream dIn;
-	private DataOutputStream dOut;
-	
     JFrame frame = new JFrame("Chatter");
     JTextField textField = new JTextField(40);
     JTextArea messageArea = new JTextArea(8, 40);
 
+	public void sendBytes(byte[] myByteArray) throws IOException {
+	    sendBytes(myByteArray, 0, myByteArray.length);
+	}
+
+	public void sendBytes(byte[] myByteArray, int start, int len) throws IOException {   
+	    dos.writeInt(len);
+	    
+	    if (len > 0) {
+	        dos.write(myByteArray, start, len);
+	    }
+	}
+	
     /**
      * Constructs the client by laying out the GUI and registering a
      * listener with the textfield so that pressing Return in the
@@ -58,12 +68,14 @@ public class SecureChatClient {
     public SecureChatClient() {
 
         // Layout GUI
-        textField.setEditable(false);
+        //textField.setEditable(false);
+        textField.setEditable(true);
         messageArea.setEditable(false);
         frame.getContentPane().add(textField, "North");
         frame.getContentPane().add(new JScrollPane(messageArea), "Center");
         frame.pack();
 
+        
         // Add Listeners
         textField.addActionListener(new ActionListener() {
             /**
@@ -72,23 +84,15 @@ public class SecureChatClient {
              * the text area in preparation for the next message.
              */
             public void actionPerformed(ActionEvent e) {
-                //out.println(textField.getText());
-                //String str = textField.getText();
-                             
-               byte[] b = (textField.getText()).getBytes();
-               textField.setText("");
-             
-                try {
-                	System.out.println("writing int byte.length");
-					dOut.writeInt(0);
-					System.out.println("writing byte");
-					dOut.write(b);
-					System.out.println("byte done write");
+    			byte[] b = (textField.getText()).getBytes();
+    			try {
+					sendBytes(b);
 				} catch (IOException e1) {
 					// TODO Auto-generated catch block
 					e1.printStackTrace();
-				} // write length of the message  
-               
+				}	
+                //out.println(textField.getText());
+                textField.setText("");
             }
         });
     }
@@ -123,26 +127,35 @@ public class SecureChatClient {
         // Make connection and initialize streams
         String serverAddress = getServerAddress();
         Socket socket = new Socket(serverAddress, 9001);
-        Socket socket2 = new Socket(serverAddress, 9002);
         
-        in = new BufferedReader(new InputStreamReader(
-            socket.getInputStream()));
-        out = new PrintWriter(socket.getOutputStream(), true);
-        
-        dIn = new DataInputStream(socket.getInputStream());
-        dOut = new DataOutputStream(socket.getOutputStream());
+        InputStream inStream = socket.getInputStream();
+	    dis = new DataInputStream(inStream);
+	    
+        OutputStream outStream = socket.getOutputStream(); 
+		dos = new DataOutputStream(outStream);
+		    
+        //in = new BufferedReader(new InputStreamReader(
+        //    socket.getInputStream()));
+        //out = new PrintWriter(socket.getOutputStream(), true);
 
         // Process all messages from server, according to the protocol.
         while (true) {
-        	System.out.println("client waiting for in.readLine()");
-            String line = in.readLine();
-            System.out.println(line);
-            if (line.startsWith("SUBMITNAME")) {
-                out.println(getName());
-            } else if (line.startsWith("NAMEACCEPTED")) {
+            //String line = in.readLine();
+		    System.out.println("receiver waiting for dis.readInt()");
+		    int len = dis.readInt();
+		    byte[] data = new byte[len];
+		    if (len > 0) {
+		        dis.readFully(data);
+		    }
+		    String txtInput = (new String(data));
+		    System.out.println(txtInput);
+		    
+            if (txtInput.startsWith("SUBMITNAME")) {
+                //out.println(getName());
+            } else if (txtInput.startsWith("NAMEACCEPTED")) {
                 textField.setEditable(true);
-            } else if (line.startsWith("MESSAGE")) {
-                messageArea.append(line.substring(8) + "\n");
+            } else if (txtInput.startsWith("MESSAGE")) {
+                messageArea.append(txtInput.substring(8) + "\n");
             }
         }
     }
@@ -151,7 +164,7 @@ public class SecureChatClient {
      * Runs the client as an application with a closeable frame.
      */
     public static void main(String[] args) throws Exception {
-    	SecureChatClient client = new SecureChatClient();
+        SecureChatClient client = new SecureChatClient();
         client.frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         client.frame.setVisible(true);
         client.run();
