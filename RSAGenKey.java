@@ -23,8 +23,8 @@ public class RSAGenKey {
 			}
 		}
 
-		BigInteger p = new BigInteger(k, rand);
-		BigInteger q = new BigInteger(k, rand);
+		BigInteger p = BigInteger.probablePrime(k, rand);
+		BigInteger q = BigInteger.probablePrime(k, rand);
 		BigInteger n = p.multiply(q);
 		BigInteger phi = (p.subtract(BigInteger.ONE)).multiply(q
 				.subtract(BigInteger.ONE));
