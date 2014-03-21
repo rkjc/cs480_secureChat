@@ -1,23 +1,18 @@
-//package secureChat;
-
-//public class SecureChatServer {
-
-//}
-
-// ###################
-
 package secureChat;
 
 import java.io.BufferedReader;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.HashSet;
 
 /**
- * 
  * A multithreaded chat room server.  When a client connects the
  * server requests a screen name by sending the client the
  * text "SUBMITNAME", and keeps requesting a name until
@@ -54,12 +49,13 @@ public class SecureChatServer {
      * The set of all the print writers for all the clients.  This
      * set is kept so we can easily broadcast messages.
      */
-    private static HashSet<PrintWriter> writers = new HashSet<PrintWriter>();
-
+    //private static HashSet<PrintWriter> writers = new HashSet<PrintWriter>();
+    private static HashSet<DataOutputStream> byteWriters = new HashSet<DataOutputStream>();
     /**
      * The appplication main method, which just listens on a port and
      * spawns handler threads.
      */
+    
     public static void main(String[] args) throws Exception {
         System.out.println("The chat server is running.");
         ServerSocket listener = new ServerSocket(PORT);
@@ -80,9 +76,21 @@ public class SecureChatServer {
     private static class Handler extends Thread {
         private String name;
         private Socket socket;
-        private BufferedReader in;
-        private PrintWriter out;
+        //private BufferedReader in;
+        //private PrintWriter out;
+        private DataOutputStream dos;
+        private DataInputStream dis;
 
+    	public void sendBytes(byte[] myByteArray, DataOutputStream ldos) throws IOException {
+    	    sendBytes(myByteArray, 0, myByteArray.length, ldos);
+    	}
+
+    	public void sendBytes(byte[] myByteArray, int start, int len, DataOutputStream ldos) throws IOException {   
+    	    ldos.writeInt(len); 	    
+    	    if (len > 0) {
+    	        ldos.write(myByteArray, start, len);
+    	    }
+    	}
         /**
          * Constructs a handler thread, squirreling away the socket.
          * All the interesting work is done in the run method.
@@ -102,15 +110,23 @@ public class SecureChatServer {
             try {
 
                 // Create character streams for the socket.
-                in = new BufferedReader(new InputStreamReader(
-                    socket.getInputStream()));
-                out = new PrintWriter(socket.getOutputStream(), true);
+                //in = new BufferedReader(new InputStreamReader(
+                //    socket.getInputStream()));
+                //out = new PrintWriter(socket.getOutputStream(), true);
+                InputStream inStream = socket.getInputStream();
+    		    dis = new DataInputStream(inStream);
+    		    
+                OutputStream outStream = socket.getOutputStream();            
+     	       	dos = new DataOutputStream(outStream);
+     	       	
 
                 // Request a name from this client.  Keep requesting until
                 // a name is submitted that is not already used.  Note that
                 // checking for the existence of a name and adding the name
                 // must be done while locking the set of names.
-                while (true) {
+              
+     	       	/*
+     	       	while (true) {
                     out.println("SUBMITNAME");
                     name = in.readLine();
                     if (name == null) {
@@ -123,22 +139,42 @@ public class SecureChatServer {
                         }
                     }
                 }
+				*/
+
 
                 // Now that a successful name has been chosen, add the
                 // socket's print writer to the set of all writers so
                 // this client can receive broadcast messages.
-                out.println("NAMEACCEPTED");
-                writers.add(out);
+                //out.println("NAMEACCEPTED");
+                //writers.add(out);
+                byteWriters.add(dos);
 
                 // Accept messages from this client and broadcast them.
                 // Ignore other clients that cannot be broadcasted to.
-                while (true) {
-                    String input = in.readLine();
-                    if (input == null) {
+                while (true) {             	
+                   // String input = in.readLine();
+                	
+                    System.out.println("receiver waiting for dis.readInt()");
+    			    int len = dis.readInt();
+    			    byte[] data = new byte[len];
+    			    if (len > 0) {
+    			        dis.readFully(data);
+    			    }
+    			    String input = new String(data);
+    			    System.out.println(input);
+    			    
+                    if (len <= 0) { //(input == null) {
                         return;
                     }
-                    for (PrintWriter writer : writers) {
-                        writer.println("MESSAGE " + name + ": " + input);
+                    for (DataOutputStream bWriter : byteWriters) {
+                        //writer.println("MESSAGE " + name + ": " + input);
+                    	byte[] tByte = ("MESSAGE" + input).getBytes();
+                    	//dos.writeInt(tByte.length); 	    
+                	    //if (len > 0) {
+                	   // 	dos.write(tByte, 0, tByte.length);
+                	    //}    
+                    	
+             			sendBytes(tByte, bWriter);
                     }
                 }
             } catch (IOException e) {
@@ -146,11 +182,11 @@ public class SecureChatServer {
             } finally {
                 // This client is going down!  Remove its name and its print
                 // writer from the sets, and close its socket.
-                if (name != null) {
-                    names.remove(name);
-                }
-                if (out != null) {
-                    writers.remove(out);
+                //if (name != null) {
+                //    names.remove(name);
+                //}
+                if (dos != null) {
+                    byteWriters.remove(dos);
                 }
                 try {
                     socket.close();
