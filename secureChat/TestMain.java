@@ -8,6 +8,26 @@ import javax.xml.bind.DatatypeConverter;
 public class TestMain {
 
 	public static void main(String[] args) {
+		
+													
+		byte[] byt = new byte[16];
+		//byte[] byt = zeros.getBytes();
+		
+		System.out.println(byt.length);
+		String msg = "less_than_16";
+		byte[] msgByt = msg.getBytes();
+		System.arraycopy( msgByt, 0, byt, 0, msgByt.length );
+		System.out.println(byt.length);
+		String str = new String(byt);
+		System.out.print(str);
+		System.out.println("|");
+		for(int i = 0; i < 16; i++){
+			System.out.println((char)byt[i]);		
+		}
+		
+		System.out.println("--end--");
+		
+	/*	###################################################################
 		System.out.println("is this going to work?");
 		
 		//simulated input string in client
@@ -31,7 +51,7 @@ public class TestMain {
 		for(int i = 0; i < messLen -1; i++)
 		{			
 			cypherByteMessage[i] = (byte) ((byteMessage[i] ^ bkey[i]) & 0xFF);
-			System.out.println(i + "  " + byteMessage[i] + "  " + bkey[i] +  "  " +  cypherByteMessage[i] );
+			//System.out.println(i + "  " + byteMessage[i] + "  " + bkey[i] +  "  " +  cypherByteMessage[i] );
 		}
 		cypherByteMessage[messLen -1] = (byte) (byteMessage[messLen -1] ^  0xFF);
 		System.out.println("");
@@ -78,7 +98,7 @@ public class TestMain {
 		for(int i = 0; i < messLen - 1; i++)
 		{			
 			cypherByteMessageIn[i] = (byte) ((cypherByteIn2[i] ^ bkey[i]));
-			System.out.println(i + "  " + cypherByteIn2[i] + "  " + bkey[i] +  "  " +  cypherByteMessageIn[i] );
+			//System.out.println(i + "  " + cypherByteIn2[i] + "  " + bkey[i] +  "  " +  cypherByteMessageIn[i] );
 		}
 		cypherByteMessageIn[messLen -1] = (byte) ((cypherByteIn2[messLen -1] ^ 0x00));
 		
@@ -121,7 +141,7 @@ public class TestMain {
 		}
 		String plainText3 = new String(plainBytes, charSet);
 		System.out.println(plainText3);
-		
+		*/
 	}
 
 }
