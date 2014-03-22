@@ -10,24 +10,24 @@ public class TestMain {
 	public static void main(String[] args) {
 		
 													
-		byte[] byt = new byte[16];
-		//byte[] byt = zeros.getBytes();
+//		byte[] byt = new byte[16];
+//		//byte[] byt = zeros.getBytes();
+//		
+//		System.out.println(byt.length);
+//		String msg = "less_than_16";
+//		byte[] msgByt = msg.getBytes();
+//		System.arraycopy( msgByt, 0, byt, 0, msgByt.length );
+//		System.out.println(byt.length);
+//		String str = new String(byt);
+//		System.out.print(str);
+//		System.out.println("|");
+//		for(int i = 0; i < 16; i++){
+//			System.out.println((char)byt[i]);		
+//		}
+//		
+//		System.out.println("--end--");
 		
-		System.out.println(byt.length);
-		String msg = "less_than_16";
-		byte[] msgByt = msg.getBytes();
-		System.arraycopy( msgByt, 0, byt, 0, msgByt.length );
-		System.out.println(byt.length);
-		String str = new String(byt);
-		System.out.print(str);
-		System.out.println("|");
-		for(int i = 0; i < 16; i++){
-			System.out.println((char)byt[i]);		
-		}
-		
-		System.out.println("--end--");
-		
-	/*	###################################################################
+//	/*	###################################################################
 		System.out.println("is this going to work?");
 		
 		//simulated input string in client
@@ -141,7 +141,7 @@ public class TestMain {
 		}
 		String plainText3 = new String(plainBytes, charSet);
 		System.out.println(plainText3);
-		*/
+//		*/
 	}
 
 }

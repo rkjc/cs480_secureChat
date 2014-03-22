@@ -26,8 +26,8 @@ import java.util.Random;
  */
 public class SecureChatServer {
 
-	public static byte[] k1;
-	public static byte[] k2;
+	public static byte[] k1 = null;
+	public static byte[] k2 = null;
 
 	static Random rand = new Random();
 
@@ -155,22 +155,35 @@ public class SecureChatServer {
 					if (len > 0) {
 						dis.readFully(data);
 					}
-					String input = new String(data);
-					System.out.println(input);
-
-					if (len <= 0) { // (input == null) {
+					else 
 						return;
-					}
-					for (DataOutputStream bWriter : byteWriters) {
-						// writer.println("MESSAGE " + name + ": " + input);
-						byte[] tByte = ("MESSAGE" + input).getBytes();
-						// dos.writeInt(tByte.length);
-						// if (len > 0) {
-						// dos.write(tByte, 0, tByte.length);
-						// }
-
-						sendBytes(tByte, bWriter);
-					}
+					
+					////
+//					decrypt
+					//split and check it or commands
+					
+					
+					
+					
+					//////
+					if(*command is send*){//send
+						String input = new String(data);
+						System.out.println(input);
+	
+						for (DataOutputStream bWriter : byteWriters) {
+							// writer.println("MESSAGE " + name + ": " + input);
+							byte[] tByte = ("MESSAGE" + input).getBytes();
+							// dos.writeInt(tByte.length);
+							// if (len > 0) {
+							// dos.write(tByte, 0, tByte.length);
+							// }
+	
+							sendBytes(tByte, bWriter);
+						}
+				}
+					
+					
+					
 				}
 			} catch (IOException e) {
 				System.out.println(e);
