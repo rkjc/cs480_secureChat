@@ -24,7 +24,7 @@ import java.util.Random;
  * 1. The protocol should be enhanced so that the client can send clean
  * disconnect messages to the server.
  * 
- * 2. The server should do some logging.
+ * 2. The server should do some logging. 
  */
 public class SecureChatServer {
 
@@ -57,22 +57,20 @@ public class SecureChatServer {
 	}
 
 	void KGen() {
-		k1 = BigInteger.probablePrime(128, rand).toByteArray();
-		k2 = BigInteger.probablePrime(128, rand).toByteArray();
+		k1 = BigInteger.probablePrime(127, rand).toByteArray();
+		k2 = BigInteger.probablePrime(127, rand).toByteArray();
 	}
 
-	public static byte[] EncryptKs(byte[] b) throws Exception { // if user is
-																// NOT logged in
-
+	// if user is NOT logged in
+	public static byte[] EncryptKs(byte[] b) throws Exception {
 		BigInteger ciphertxt = new BigInteger(b);
 		ciphertxt = ciphertxt.modPow(e, n);
 		b = ciphertxt.toByteArray();
 		return b;
 	}
 
-	public byte[] DecryptKs(byte[] b) throws Exception { // if user is NOT
-															// logged in
-
+	// if user is NOT logged in
+	public byte[] DecryptKs(byte[] b) throws Exception { 
 		BigInteger ciphertxt = new BigInteger(b);
 		ciphertxt = ciphertxt.modPow(d, n);
 		b = ciphertxt.toByteArray();
@@ -91,10 +89,9 @@ public class SecureChatServer {
 	private static HashSet<String> names = new HashSet<String>();
 
 	/**
-	 * The set of all the print writers for all the clients. This set is kept so
+	 * The set of all the DataOutputStreams for all the clients. This set is kept so
 	 * we can easily broadcast messages.
 	 */
-	// private static HashSet<PrintWriter> writers = new HashSet<PrintWriter>();
 	private static HashSet<DataOutputStream> byteWriters = new HashSet<DataOutputStream>();
 
 	/**
@@ -141,8 +138,6 @@ public class SecureChatServer {
 	private static class Handler extends Thread {
 		private String name;
 		private Socket socket;
-		// private BufferedReader in;
-		// private PrintWriter out;
 		private DataOutputStream dos;
 		private DataInputStream dis;
 
@@ -177,24 +172,14 @@ public class SecureChatServer {
 		public void run() {
 			boolean valid = false;
 			try {
-
-				// Create character streams for the socket.
-				// in = new BufferedReader(new InputStreamReader(
-				// socket.getInputStream()));
-				// out = new PrintWriter(socket.getOutputStream(), true);
+				// Create data streams for the socket.
 				InputStream inStream = socket.getInputStream();
 				dis = new DataInputStream(inStream);
 
 				OutputStream outStream = socket.getOutputStream();
 				dos = new DataOutputStream(outStream);
 
-				// Request a name from this client. Keep requesting until
-				// a name is submitted that is not already used. Note that
-				// checking for the existence of a name and adding the name
-				// must be done while locking the set of names.
-				
-				
-				
+				// Wait for a login name and password from this client. 					
 				while (true) //login loop
 				{
 					System.out.println("server receiver waiting for login dis.readInt()");
@@ -206,28 +191,29 @@ public class SecureChatServer {
 					} else
 						return;
 
-					// use server private key 'data'
+					// use server private key to decrypt 'data'
 
+					//Separate input data into components
 					int lenOfmsgOut = 0;
 					byte blomOut;
-					byte[] b16out = new byte[data.length - 17];
+					byte[] b16in = new byte[data.length - 17];
 					byte[] Ks = new byte[16];
 
 					blomOut = data[0];
-					System.arraycopy(data, 1, b16out, 0, b16out.length);
-					System.arraycopy(data, 1 + b16out.length, Ks, 0, 16);
+					System.arraycopy(data, 1, b16in, 0, b16in.length);
+					System.arraycopy(data, 1 + b16in.length, Ks, 0, 16);
 					int lom = (int) blomOut;
 
 					// login test process goes here
 
 					System.out.println(lom);
-					System.out.println(new String(b16out));
+					System.out.println(new String(b16in));
 					System.out.println(new String(Ks));
 
 					
-					//### add transmitter
-					// generrate this string from k1 k2 encoded using Ks
-					String k1k2 = "12345678123456781234567812345678";
+					//return k1 k2 and Ks to the client
+					// generate this string from k1 k2 encoded using Ks
+					String k1k2 = "12345678123456781234567812345678"; //bogus data
 					
 					byte[] retData = k1k2.getBytes();
 					
@@ -235,44 +221,27 @@ public class SecureChatServer {
 					byte size = (byte)msgSize;
 					int numBlock = (int) Math.ceil((double)msgSize / 16.0f);
 					byte[] b16 = new byte[numBlock * 16];
-					System.arraycopy( data, 0, b16, 0, retData.length );
-		
+					System.arraycopy( retData, 0, b16, 0, retData.length );	
 					byte[] c = new byte[1 + numBlock*16 + 16];
-
-					System.out.println("c length " + c.length);
-					System.out.println("b length " + retData.length);
-					System.out.println("b16 length " + b16.length);
-					System.out.println("Ks length " + Ks.length);
-					System.out.println("Ks:  " + Ks);
-
-					
 					c[0] =  size;
-					System.arraycopy(b16, 0, c, 1, data.length);
+					System.arraycopy(b16, 0, c, 1, b16.length);
 					System.arraycopy(Ks, 0, c, c.length-16, 16);
 					
+					//send login response c back to the client
+					sendBytes(c, dos);
 					
 					// test if user is on name password list
 					if (true) {
 						valid = true;
+						byteWriters.add(dos);
 						break;
-					}
-				
+					}			
 				}
-
-				// Now that a successful name has been chosen, add the
-				// socket's print writer to the set of all writers so
-				// this client can receive broadcast messages.
-				// out.println("NAMEACCEPTED");
-				// writers.add(out);
 				
-				// test valid to continue
-				byteWriters.add(dos);
 
 				// Accept messages from this client and broadcast them.
 				// Ignore other clients that cannot be broadcasted to.
 				while (valid) {
-					// String input = in.readLine();
-
 					System.out.println("receiver waiting for dis.readInt()");
 					int len = dis.readInt();
 					byte[] data = new byte[len];
@@ -296,10 +265,12 @@ public class SecureChatServer {
 					// use k2 on MACout
 					
 
-					// ////
-					if (true) {// *command is send* // broadcast to everyone
+					// if message is valid broadcast to everyone
+					if (true) {
 						for (DataOutputStream bWriter : byteWriters) {
-							sendBytes(data, bWriter);
+							//TODO make this so that it adds the client 
+							//name to the message before broadcasting
+							sendBytes(data, bWriter); 
 						}
 					}
 
