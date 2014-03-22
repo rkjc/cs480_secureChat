@@ -45,7 +45,7 @@ public class SecureChatClient {
 	public static Random rand = new Random();
 
 	public void KGen() {
-		Ks = BigInteger.probablePrime(128, rand).toByteArray();
+		Ks = BigInteger.probablePrime(127, rand).toByteArray();
 	}
 	
 	public void GetKeys() throws Exception {
