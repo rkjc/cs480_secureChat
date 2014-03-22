@@ -4,7 +4,9 @@ import java.io.*;
 import java.math.BigInteger;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map.Entry;
 import java.util.Random;
 
 /**
@@ -28,14 +30,50 @@ public class SecureChatServer {
 
 	public static byte[] k1 = null;
 	public static byte[] k2 = null;
-
 	static Random rand = new Random();
+	@SuppressWarnings("unchecked")
+	static HashMap<String, String> newmap = new HashMap();
+	public static BigInteger e = null;
+	public static BigInteger d = null;
+	public static BigInteger n = null;
+
+	public void GetKeys() throws Exception {
+		BufferedReader keys = new BufferedReader(new FileReader("pub_key.txt"));
+		try {
+			e = new BigInteger(keys.readLine().replaceAll("\\s+", "").substring(2));
+			n = new BigInteger(keys.readLine().replaceAll("\\s+", "").substring(2));
+			keys.close();
+			keys = new BufferedReader(new FileReader("pri_key.txt"));
+			d = new BigInteger(keys.readLine().replaceAll("\\s+", "").substring(2));
+			keys.close();
+
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
 
 	void KGen() {
 		k1 = BigInteger.probablePrime(128, rand).toByteArray();
 		k2 = BigInteger.probablePrime(128, rand).toByteArray();
 	}
 
+	public byte[] EncryptKs(byte[] b) throws Exception { // if user is NOT logged in
+		
+		BigInteger ciphertxt = new BigInteger(b);
+		ciphertxt=ciphertxt.modPow(e,n);
+		b=ciphertxt.toByteArray();				
+		return b;
+	}
+	
+	public byte[] DecryptKs(byte[] b) throws Exception { // if user is NOT logged in
+		
+		BigInteger ciphertxt = new BigInteger(b);
+		ciphertxt=ciphertxt.modPow(d,n);
+		b=ciphertxt.toByteArray();				
+		return b;
+	}
+	
 	/**
 	 * The port that the server listens on.
 	 */
@@ -60,6 +98,7 @@ public class SecureChatServer {
 	 */
 
 	public static void main(String[] args) throws Exception {
+		LoadUsers();
 
 		System.out.println("The chat server is running.");
 		ServerSocket listener = new ServerSocket(PORT);
@@ -70,6 +109,23 @@ public class SecureChatServer {
 		} finally {
 			listener.close();
 		}
+	}
+
+	public static void LoadUsers() throws Exception {
+		BufferedReader br = new BufferedReader(new FileReader("userlist.txt"));
+		String line;
+
+		while ((line = br.readLine()) != null) {
+			String[] columns = line.split(" ");
+			newmap.put(columns[0], columns[1]);
+		}
+
+		// iterate through entire map
+		// for (Entry<String, String> entry : newmap.entrySet()) {
+		// String key = entry.getKey();
+		// Object value = entry.getValue();
+		// System.out.println("key "+entry.getKey()+" value "+entry.getValue());
+		// }
 	}
 
 	/**
@@ -154,36 +210,32 @@ public class SecureChatServer {
 					byte[] data = new byte[len];
 					if (len > 0) {
 						dis.readFully(data);
-					}
-					else 
+					} else
 						return;
-					
-					////
-//					decrypt
-					//split and check it or commands
-					
-					
-					
-					
-					//////
-					if(*command is send*){//send
+
+					// //
+					// decrypt
+					// split and check it or commands
+
+					System.out.println("test");
+
+					// ////
+					if (true) {// *command is send*
 						String input = new String(data);
 						System.out.println(input);
-	
+
 						for (DataOutputStream bWriter : byteWriters) {
 							// writer.println("MESSAGE " + name + ": " + input);
-							byte[] tByte = ("MESSAGE" + input).getBytes();
+							byte[] tByte = ("MESSAGE " + input).getBytes();
 							// dos.writeInt(tByte.length);
 							// if (len > 0) {
 							// dos.write(tByte, 0, tByte.length);
 							// }
-	
+
 							sendBytes(tByte, bWriter);
 						}
-				}
-					
-					
-					
+					}
+
 				}
 			} catch (IOException e) {
 				System.out.println(e);

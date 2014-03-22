@@ -40,23 +40,28 @@ public class SecureChatClient {
 	public static byte[] k1 = null;
 	public static byte[] k2 = null;
 	public static BigInteger e = null;
+	public static BigInteger d = null;
 	public static BigInteger n = null;
 	public static Random rand = new Random();
 
 	public void KGen() {
 		Ks = BigInteger.probablePrime(128, rand).toByteArray();
 	}
-
+	
 	public void GetKeys() throws Exception {
 		BufferedReader keys = new BufferedReader(new FileReader("pub_key.txt"));
 		try {
 			e = new BigInteger(keys.readLine().replaceAll("\\s+", "").substring(2));
 			n = new BigInteger(keys.readLine().replaceAll("\\s+", "").substring(2));
+			keys.close();
+			keys = new BufferedReader(new FileReader("pri_key.txt"));
+			d = new BigInteger(keys.readLine().replaceAll("\\s+", "").substring(2));
+			keys.close();
+
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-
 	}
 
 	public void sendBytes(byte[] myByteArray) throws IOException {
@@ -104,7 +109,7 @@ public class SecureChatClient {
 				// encrypt here
 				
 				if (k1 == null) {// not logged in
-					byte[] c = new byte[b.length + Ks.length+1];  // Concatenate Ks to the end of b
+					byte[] c = new byte[b.length + Ks.length+ 1];  // Concatenate Ks to the end of b
 					System.arraycopy( size  , 0, c, 0, 1);
 					System.arraycopy(b, 0, c, 1, b.length);
 					System.arraycopy(Ks, 0, c, b.length+1, Ks.length);
@@ -114,6 +119,8 @@ public class SecureChatClient {
 						// TODO Auto-generated catch block
 						e1.printStackTrace();
 					}
+					System.out.println("test522");
+
 
 				}
 
@@ -143,12 +150,19 @@ public class SecureChatClient {
 	public byte[] EncryptKs(byte[] b) throws Exception { // if user is NOT logged in
 		
 		BigInteger ciphertxt = new BigInteger(b);
-
 		ciphertxt=ciphertxt.modPow(e,n);
 		b=ciphertxt.toByteArray();				
-		
 		return b;
 	}
+	
+	public byte[] DecryptKs(byte[] b) throws Exception { // if user is NOT logged in
+		
+		BigInteger ciphertxt = new BigInteger(b);
+		ciphertxt=ciphertxt.modPow(d,n);
+		b=ciphertxt.toByteArray();				
+		return b;
+	}
+	
 
 	public byte[] EncryptK1andK2(byte[] b) { // if user IS logged in
 
