@@ -175,6 +175,7 @@ public class SecureChatServer {
 		 * repeatedly gets inputs and broadcasts them.
 		 */
 		public void run() {
+			boolean valid = false;
 			try {
 
 				// Create character streams for the socket.
@@ -191,8 +192,11 @@ public class SecureChatServer {
 				// a name is submitted that is not already used. Note that
 				// checking for the existence of a name and adding the name
 				// must be done while locking the set of names.
-				boolean valid = false;
-				while (true) {
+				
+				
+				
+				while (true) //login loop
+				{
 					System.out.println("server receiver waiting for login dis.readInt()");
 					int len = dis.readInt();
 					byte[] data = new byte[len];
@@ -207,25 +211,52 @@ public class SecureChatServer {
 					int lenOfmsgOut = 0;
 					byte blomOut;
 					byte[] b16out = new byte[data.length - 17];
-					byte[] MACout = new byte[16];
+					byte[] Ks = new byte[16];
 
 					blomOut = data[0];
 					System.arraycopy(data, 1, b16out, 0, b16out.length);
-					System.arraycopy(data, 1 + b16out.length, MACout, 0, 16);
+					System.arraycopy(data, 1 + b16out.length, Ks, 0, 16);
 					int lom = (int) blomOut;
 
 					// login test process goes here
 
 					System.out.println(lom);
 					System.out.println(new String(b16out));
-					System.out.println(new String(MACout));
+					System.out.println(new String(Ks));
 
+					
+					//### add transmitter
+					// generrate this string from k1 k2 encoded using Ks
+					String k1k2 = "12345678123456781234567812345678";
+					
+					byte[] retData = k1k2.getBytes();
+					
+					int msgSize = retData.length;
+					byte size = (byte)msgSize;
+					int numBlock = (int) Math.ceil((double)msgSize / 16.0f);
+					byte[] b16 = new byte[numBlock * 16];
+					System.arraycopy( data, 0, b16, 0, retData.length );
+		
+					byte[] c = new byte[1 + numBlock*16 + 16];
+
+					System.out.println("c length " + c.length);
+					System.out.println("b length " + retData.length);
+					System.out.println("b16 length " + b16.length);
+					System.out.println("Ks length " + Ks.length);
+					System.out.println("Ks:  " + Ks);
+
+					
+					c[0] =  size;
+					System.arraycopy(b16, 0, c, 1, data.length);
+					System.arraycopy(Ks, 0, c, c.length-16, 16);
+					
 					
 					// test if user is on name password list
 					if (true) {
 						valid = true;
 						break;
 					}
+				
 				}
 
 				// Now that a successful name has been chosen, add the
@@ -239,7 +270,7 @@ public class SecureChatServer {
 
 				// Accept messages from this client and broadcast them.
 				// Ignore other clients that cannot be broadcasted to.
-				while (true) {
+				while (valid) {
 					// String input = in.readLine();
 
 					System.out.println("receiver waiting for dis.readInt()");
