@@ -93,7 +93,7 @@ public class SecureChatClient {
 		frame.getContentPane().add(textField, "North");
 		frame.getContentPane().add(new JScrollPane(messageArea), "Center");
 		frame.pack();
-
+		
 		// Add Listeners
 		textField.addActionListener(new ActionListener() {
 			/**
@@ -101,32 +101,80 @@ public class SecureChatClient {
 			 * the contents of the text field to the server. Then clear the text
 			 * area in preparation for the next message.
 			 */
+			
 			public void actionPerformed(ActionEvent e) {
 
 				byte[] b = (textField.getText()).getBytes();
-				Integer msgSize = textField.getText().length();
-				byte size = msgSize.byteValue();
+				
 				// encrypt here
 				
 				if (k1 == null) {// not logged in
-					byte[] c = new byte[b.length + Ks.length+ 1];  // Concatenate Ks to the end of b
-					System.arraycopy( size  , 0, c, 0, 1);
-					System.arraycopy(b, 0, c, 1, b.length);
-					System.arraycopy(Ks, 0, c, b.length+1, Ks.length);
+					int msgSize = b.length;
+					byte size = (byte)msgSize;
+					int numBlock = (int) Math.ceil((double)msgSize / 16.0f);
+					byte[] b16 = new byte[numBlock * 16];
+					System.arraycopy( b, 0, b16, 0, b.length );
+		
+					byte[] c = new byte[1 + numBlock*16 + 16];
+
+					System.out.println("c length " + c.length);
+					System.out.println("b length " + b.length);
+					System.out.println("b16 length " + b16.length);
+					System.out.println("Ks length " + Ks.length);
+					System.out.println("Ks:  " + Ks);
+
+					
+					c[0] =  size;
+					System.arraycopy(b16, 0, c, 1, b.length);
+					System.arraycopy(Ks, 0, c, c.length-16, 16);
+					
+					// encrypt c using server public key
+					
 					try {
-						b = EncryptKs(c);
+						c = EncryptKs(c);
 					} catch (Exception e1) {
 						// TODO Auto-generated catch block
 						e1.printStackTrace();
 					}
+					
+					b = c;
 					System.out.println("test522");
-
-
 				}
 
-				else
+				else{
 					// logged in
-					b = EncryptK1andK2(b);
+					  										
+					
+					try {
+						byte[] MAC = new byte[16];
+						MessageDigest m = MessageDigest.getInstance("MD5");
+						m.update(b);
+						byte[] dig = m.digest();
+						
+						MAC = EncryptK2(dig);
+						//MAC = ("1234567812345678").getBytes();  // ****** bogus MAC
+						b = EncryptK1(b);
+						
+						
+						int msgSize = b.length;
+						byte size = (byte)msgSize;
+						int numBlock = (int) Math.ceil((double)msgSize / 16.0f);
+						byte[] b16 = new byte[numBlock * 16];
+						System.arraycopy( b, 0, b16, 0, b.length );
+						//byte[] c = new byte[b.length + Ks.length+ 1];  // Concatenate Ks to the end of b
+						byte[] c = new byte[1 + numBlock*16 + 16];
+	
+						
+						c[0] =  size;
+						System.arraycopy(b16, 0, c, 1, b.length);
+						System.arraycopy(Ks, 0, c, c.length-16, 16);
+						
+						b = EncryptKs(c);
+					} catch (Exception e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}				
+				}
 
 				try {
 					sendBytes(b);
@@ -164,7 +212,12 @@ public class SecureChatClient {
 	}
 	
 
-	public byte[] EncryptK1andK2(byte[] b) { // if user IS logged in
+	public byte[] EncryptK1(byte[] b) { // if user IS logged in
+
+		return b;
+	}
+	
+	public byte[] EncryptK2(byte[] b) { // if user IS logged in
 
 		return b;
 	}
@@ -188,6 +241,7 @@ public class SecureChatClient {
 	 */
 	private void run() throws IOException {
 
+		KGen(); // makes the random key Ks
 		// Make connection and initialize streams
 		String serverAddress = getServerAddress();
 		Socket socket = new Socket(serverAddress, 9001);
@@ -211,6 +265,7 @@ public class SecureChatClient {
 			if (len > 0) {
 				dis.readFully(data);
 			}
+			
 			String txtInput = (new String(data));
 			System.out.println(txtInput);
 

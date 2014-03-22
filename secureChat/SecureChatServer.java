@@ -40,11 +40,14 @@ public class SecureChatServer {
 	public void GetKeys() throws Exception {
 		BufferedReader keys = new BufferedReader(new FileReader("pub_key.txt"));
 		try {
-			e = new BigInteger(keys.readLine().replaceAll("\\s+", "").substring(2));
-			n = new BigInteger(keys.readLine().replaceAll("\\s+", "").substring(2));
+			e = new BigInteger(keys.readLine().replaceAll("\\s+", "")
+					.substring(2));
+			n = new BigInteger(keys.readLine().replaceAll("\\s+", "")
+					.substring(2));
 			keys.close();
 			keys = new BufferedReader(new FileReader("pri_key.txt"));
-			d = new BigInteger(keys.readLine().replaceAll("\\s+", "").substring(2));
+			d = new BigInteger(keys.readLine().replaceAll("\\s+", "")
+					.substring(2));
 			keys.close();
 
 		} catch (FileNotFoundException e) {
@@ -58,22 +61,24 @@ public class SecureChatServer {
 		k2 = BigInteger.probablePrime(128, rand).toByteArray();
 	}
 
-	public byte[] EncryptKs(byte[] b) throws Exception { // if user is NOT logged in
-		
+	public static byte[] EncryptKs(byte[] b) throws Exception { // if user is
+																// NOT logged in
+
 		BigInteger ciphertxt = new BigInteger(b);
-		ciphertxt=ciphertxt.modPow(e,n);
-		b=ciphertxt.toByteArray();				
+		ciphertxt = ciphertxt.modPow(e, n);
+		b = ciphertxt.toByteArray();
 		return b;
 	}
-	
-	public byte[] DecryptKs(byte[] b) throws Exception { // if user is NOT logged in
-		
+
+	public byte[] DecryptKs(byte[] b) throws Exception { // if user is NOT
+															// logged in
+
 		BigInteger ciphertxt = new BigInteger(b);
-		ciphertxt=ciphertxt.modPow(d,n);
-		b=ciphertxt.toByteArray();				
+		ciphertxt = ciphertxt.modPow(d, n);
+		b = ciphertxt.toByteArray();
 		return b;
 	}
-	
+
 	/**
 	 * The port that the server listens on.
 	 */
@@ -148,6 +153,7 @@ public class SecureChatServer {
 
 		public void sendBytes(byte[] myByteArray, int start, int len,
 				DataOutputStream ldos) throws IOException {
+
 			ldos.writeInt(len);
 			if (len > 0) {
 				ldos.write(myByteArray, start, len);
@@ -185,19 +191,50 @@ public class SecureChatServer {
 				// a name is submitted that is not already used. Note that
 				// checking for the existence of a name and adding the name
 				// must be done while locking the set of names.
+				boolean valid = false;
+				while (true) {
+					System.out.println("server receiver waiting for login dis.readInt()");
+					int len = dis.readInt();
+					byte[] data = new byte[len];
+					if (len > 0) {
+						System.out.println("server reading data");
+						dis.readFully(data);
+					} else
+						return;
 
-				/*
-				 * while (true) { out.println("SUBMITNAME"); name =
-				 * in.readLine(); if (name == null) { return; } synchronized
-				 * (names) { if (!names.contains(name)) { names.add(name);
-				 * break; } } }
-				 */
+					// use server private key 'data'
+
+					int lenOfmsgOut = 0;
+					byte blomOut;
+					byte[] b16out = new byte[data.length - 17];
+					byte[] MACout = new byte[16];
+
+					blomOut = data[0];
+					System.arraycopy(data, 1, b16out, 0, b16out.length);
+					System.arraycopy(data, 1 + b16out.length, MACout, 0, 16);
+					int lom = (int) blomOut;
+
+					// login test process goes here
+
+					System.out.println(lom);
+					System.out.println(new String(b16out));
+					System.out.println(new String(MACout));
+
+					
+					// test if user is on name password list
+					if (true) {
+						valid = true;
+						break;
+					}
+				}
 
 				// Now that a successful name has been chosen, add the
 				// socket's print writer to the set of all writers so
 				// this client can receive broadcast messages.
 				// out.println("NAMEACCEPTED");
 				// writers.add(out);
+				
+				// test valid to continue
 				byteWriters.add(dos);
 
 				// Accept messages from this client and broadcast them.
@@ -213,26 +250,25 @@ public class SecureChatServer {
 					} else
 						return;
 
-					// //
-					// decrypt
-					// split and check it or commands
+					int lenOfmsgOut = 0;
+					byte blomOut;
+					byte[] b16out = new byte[data.length - 17];
+					byte[] MACout = new byte[16];
 
-					System.out.println("test");
+					blomOut = data[0];
+					System.arraycopy(data, 1, b16out, 0, b16out.length);
+					System.arraycopy(data, 1 + b16out.length, MACout, 0, 16);
+					int lom = (int) blomOut;
+
+					// test for valid message here
+					// use k1 on b16out
+					// use k2 on MACout
+					
 
 					// ////
-					if (true) {// *command is send*
-						String input = new String(data);
-						System.out.println(input);
-
+					if (true) {// *command is send* // broadcast to everyone
 						for (DataOutputStream bWriter : byteWriters) {
-							// writer.println("MESSAGE " + name + ": " + input);
-							byte[] tByte = ("MESSAGE " + input).getBytes();
-							// dos.writeInt(tByte.length);
-							// if (len > 0) {
-							// dos.write(tByte, 0, tByte.length);
-							// }
-
-							sendBytes(tByte, bWriter);
+							sendBytes(data, bWriter);
 						}
 					}
 
@@ -240,11 +276,6 @@ public class SecureChatServer {
 			} catch (IOException e) {
 				System.out.println(e);
 			} finally {
-				// This client is going down! Remove its name and its print
-				// writer from the sets, and close its socket.
-				// if (name != null) {
-				// names.remove(name);
-				// }
 				if (dos != null) {
 					byteWriters.remove(dos);
 				}
