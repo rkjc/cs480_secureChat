@@ -2,21 +2,12 @@
 package secureChat;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.BufferedReader;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.PrintWriter;
+import java.io.*;
+import java.math.BigInteger;
 import java.net.Socket;
+import java.util.Random;
 
-import javax.swing.JFrame;
-import javax.swing.JOptionPane;
-import javax.swing.JScrollPane;
-import javax.swing.JTextArea;
-import javax.swing.JTextField;
+import javax.swing.*;
 
 /**
  * A simple Swing-based client for the chat server.  Graphically
@@ -44,7 +35,29 @@ public class SecureChatClient {
     JFrame frame = new JFrame("Chatter");
     JTextField textField = new JTextField(40);
     JTextArea messageArea = new JTextArea(8, 40);
+    
+	private static byte[] Ks;	
+	public static byte[] k1;	
+	public static byte[] k2;	
+	public static String e;
+	public static String n;
+	public static Random rand = new Random();
 
+	public void KGen(){
+		Ks = BigInteger.probablePrime(128, rand).toByteArray();
+	}
+
+	public void GetKeys() throws Exception{
+		BufferedReader keys = new BufferedReader(new FileReader("pub_key.txt"));
+		try {			
+			e = keys.readLine().replaceAll("\\s+","").substring(2);
+			n = keys.readLine().replaceAll("\\s+","").substring(2);		
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+	}
 	public void sendBytes(byte[] myByteArray) throws IOException {
 	    sendBytes(myByteArray, 0, myByteArray.length);
 	}
@@ -84,6 +97,7 @@ public class SecureChatClient {
              * the text area in preparation for the next message.
              */
             public void actionPerformed(ActionEvent e) {
+            	
     			byte[] b = (textField.getText()).getBytes();
     			try {
 					sendBytes(b);
