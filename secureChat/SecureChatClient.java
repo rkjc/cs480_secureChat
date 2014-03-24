@@ -43,9 +43,29 @@ public class SecureChatClient {
 	public static BigInteger d = null;
 	public static BigInteger n = null;
 	public static Random rand = new Random();
+	
+	public void setk1(byte[] k1){
+		this.k1 = k1;
+	}
+	
+	public byte[] getk1(){
+		return k1;
+	}
+	
+	public void setk2(byte[] k2){
+		this.k2 = k2;
+	}
+	
+	public byte[] getk2(){
+		return k2;
+	}
+	
+	public byte[] getKs(){
+		return Ks;
+	}
 
 	public void KGen() {
-		Ks = BigInteger.probablePrime(128, rand).toByteArray();
+		Ks = BigInteger.probablePrime(127, rand).toByteArray();
 	}
 	
 	public void GetKeys() throws Exception {
@@ -71,12 +91,12 @@ public class SecureChatClient {
 	public void sendBytes(byte[] myByteArray, int start, int len)
 			throws IOException {
 		dos.writeInt(len);
-
 		if (len > 0) {
 			dos.write(myByteArray, start, len);
 		}
 	}
 
+	
 	/**
 	 * Constructs the client by laying out the GUI and registering a listener
 	 * with the textfield so that pressing Return in the listener sends the
@@ -85,7 +105,8 @@ public class SecureChatClient {
 	 * receives the NAMEACCEPTED message from the server.
 	 */
 	public SecureChatClient() {
-
+		
+		KGen(); // makes the random key Ks
 		// Layout GUI
 		// textField.setEditable(false);
 		textField.setEditable(true);
@@ -93,7 +114,7 @@ public class SecureChatClient {
 		frame.getContentPane().add(textField, "North");
 		frame.getContentPane().add(new JScrollPane(messageArea), "Center");
 		frame.pack();
-
+		
 		// Add Listeners
 		textField.addActionListener(new ActionListener() {
 			/**
@@ -101,40 +122,61 @@ public class SecureChatClient {
 			 * the contents of the text field to the server. Then clear the text
 			 * area in preparation for the next message.
 			 */
+			
 			public void actionPerformed(ActionEvent e) {
-
 				byte[] b = (textField.getText()).getBytes();
-				Integer msgSize = textField.getText().length();
-				byte size = msgSize.byteValue();
-				// encrypt here
 				
-				if (k1 == null) {// not logged in
-					byte[] c = new byte[b.length + Ks.length+ 1];  // Concatenate Ks to the end of b
-					System.arraycopy( size  , 0, c, 0, 1);
-					System.arraycopy(b, 0, c, 1, b.length);
-					System.arraycopy(Ks, 0, c, b.length+1, Ks.length);
-					try {
-						b = EncryptKs(c);
-					} catch (Exception e1) {
-						// TODO Auto-generated catch block
-						e1.printStackTrace();
-					}
-					System.out.println("test522");
-
-
-				}
-
-				else
-					// logged in
-					b = EncryptK1andK2(b);
-
+				// encrypt here
 				try {
-					sendBytes(b);
-				} catch (IOException e1) {
+					if (k1 == null) {// not logged in
+						System.out.println("logging in with " + new String(b));
+						int msgSize = b.length;
+						byte size = (byte)msgSize;
+						int numBlock = (int) Math.ceil((double)msgSize / 16.0f);
+						byte[] b16 = new byte[numBlock * 16];
+						System.arraycopy( b, 0, b16, 0, b.length );			
+						byte[] c = new byte[1 + numBlock*16 + 16];				
+						c[0] =  size;
+						System.arraycopy(b16, 0, c, 1, b.length);
+						System.arraycopy(Ks, 0, c, c.length-16, 16);
+						
+						// encrypt c using server public key					
+						c = EncryptKs(c);
+											
+						System.out.println("sending login data to server");
+						sendBytes(c);
+					} else {
+					// logged in	
+						System.out.println("sending message " + new String(b));
+						byte[] MAC = new byte[16];
+						MessageDigest m = MessageDigest.getInstance("MD5");
+						m.update(b);
+						byte[] dig = m.digest();
+						
+						MAC = EncryptK2(dig);
+						b = EncryptK1(b);
+										
+						int msgSize = b.length;
+						byte size = (byte)msgSize;
+						int numBlock = (int) Math.ceil((double)msgSize / 16.0f);
+						byte[] b16 = new byte[numBlock * 16];
+						System.arraycopy( b, 0, b16, 0, b.length );
+						//byte[] c = new byte[b.length + Ks.length+ 1];  // Concatenate Ks to the end of b
+						byte[] c = new byte[1 + numBlock*16 + 16];
+						
+						c[0] =  size;
+						System.arraycopy(b16, 0, c, 1, b.length);
+						System.arraycopy(Ks, 0, c, c.length-16, 16);
+						
+						b = EncryptKs(c);
+						System.out.println("sending message data to server");
+						sendBytes(b);								
+					}
+				} catch (Exception e1) {
 					// TODO Auto-generated catch block
 					e1.printStackTrace();
-				}
-				// out.println(textField.getText());
+				}	
+
 				textField.setText("");
 			}
 		});
@@ -147,25 +189,28 @@ public class SecureChatClient {
 	 * @throws Exception 
 	 */
 
-	public byte[] EncryptKs(byte[] b) throws Exception { // if user is NOT logged in
-		
-		BigInteger ciphertxt = new BigInteger(b);
-		ciphertxt=ciphertxt.modPow(e,n);
-		b=ciphertxt.toByteArray();				
+	// if user is NOT logged in
+	public byte[] EncryptKs(byte[] b) throws Exception { 		
+//		BigInteger ciphertxt = new BigInteger(b);
+//		ciphertxt=ciphertxt.modPow(e,n);
+//		b=ciphertxt.toByteArray();				
 		return b;
 	}
 	
-	public byte[] DecryptKs(byte[] b) throws Exception { // if user is NOT logged in
-		
-		BigInteger ciphertxt = new BigInteger(b);
-		ciphertxt=ciphertxt.modPow(d,n);
-		b=ciphertxt.toByteArray();				
+	// if user is NOT logged in
+	public byte[] DecryptKs(byte[] b) throws Exception { 		
+//		BigInteger ciphertxt = new BigInteger(b);
+//		ciphertxt=ciphertxt.modPow(d,n);
+//		b=ciphertxt.toByteArray();				
 		return b;
 	}
 	
 
-	public byte[] EncryptK1andK2(byte[] b) { // if user IS logged in
-
+	public byte[] EncryptK1(byte[] b) { // if user IS logged in
+		return b;
+	}
+	
+	public byte[] EncryptK2(byte[] b) { // if user IS logged in
 		return b;
 	}
 
@@ -187,7 +232,17 @@ public class SecureChatClient {
 	 * Connects to the server then enters the processing loop.
 	 */
 	private void run() throws IOException {
-
+		int len;
+		byte[] data = null;
+		byte[] k1 = null;
+		byte[] k2 = null;
+		int lenOfmsg;
+		int lom;
+		byte blom;
+		byte[] b16;
+		byte[] Ks;
+		byte[] MAC;
+		
 		// Make connection and initialize streams
 		String serverAddress = getServerAddress();
 		Socket socket = new Socket(serverAddress, 9001);
@@ -197,30 +252,72 @@ public class SecureChatClient {
 
 		OutputStream outStream = socket.getOutputStream();
 		dos = new DataOutputStream(outStream);
-
-		// in = new BufferedReader(new InputStreamReader(
-		// socket.getInputStream()));
-		// out = new PrintWriter(socket.getOutputStream(), true);
+		
+		boolean loggedin = false;
+		while(! loggedin){
+			//catch response to login request
+			System.out.println("client receiver waiting for login response dis.readInt()");
+			len = dis.readInt();
+			data = new byte[len];
+			if (len > 0) {
+				dis.readFully(data);
+			}
+			
+			lenOfmsg = 0;
+			b16 = new byte[data.length - 17];
+			Ks = new byte[16];
+	
+			blom = data[0];
+			System.arraycopy(data, 1, b16, 0, b16.length);
+			System.arraycopy(data, 1 + b16.length, Ks, 0, 16);
+			lom = (int) blom;
+			
+			k1 = new byte[16];
+			k2 = new byte[16];
+			
+			System.arraycopy(b16, 0, k1, 0, 16);
+			System.arraycopy(b16, 16, k2, 0, 16);
+			
+			System.out.println("k1 " + new String(k1));
+			System.out.println("k2 " + new String(k2));
+			System.out.println("Ks " + new String(Ks));
+			
+			if(true){  //(Ks == getKs()){
+				setk1(k1);
+				setk2(k2);
+				loggedin = true;
+				System.out.println("client is logged in");
+			}		
+		}
 
 		// Process all messages from server, according to the protocol.
 		while (true) {
 			// String line = in.readLine();
-			System.out.println("receiver waiting for dis.readInt()");
-			int len = dis.readInt();
-			byte[] data = new byte[len];
+			System.out.println("client receiver waiting for dis.readInt()");
+			len = dis.readInt();
+			data = new byte[len];
 			if (len > 0) {
 				dis.readFully(data);
 			}
-			String txtInput = (new String(data));
-			System.out.println(txtInput);
+			
+			lenOfmsg = 0;
+			b16 = new byte[data.length - 17];
+			MAC = new byte[16];
 
-			if (txtInput.startsWith("SUBMITNAME")) {
-				// out.println(getName());
-			} else if (txtInput.startsWith("NAMEACCEPTED")) {
-				textField.setEditable(true);
-			} else if (txtInput.startsWith("MESSAGE")) {
-				messageArea.append(txtInput.substring(8) + "\n");
-			}
+			blom = data[0];
+			System.arraycopy(data, 1, b16, 0, b16.length);
+			System.arraycopy(data, 1 + b16.length, MAC, 0, 16);
+			lom = (int) blom;
+			
+			System.out.println("b16 " + new String(b16));
+			System.out.println("length of message " + lom);
+			System.out.println("MAC " + new String(MAC));
+			
+			//decrypt using k1 and k2
+			//print to UI if MAC is valid
+			
+			messageArea.append(new String(b16) + "\n");
+					
 		}
 	}
 

@@ -4,8 +4,11 @@ import java.io.*;
 import java.math.BigInteger;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
 
@@ -24,7 +27,7 @@ import java.util.Random;
  * 1. The protocol should be enhanced so that the client can send clean
  * disconnect messages to the server.
  * 
- * 2. The server should do some logging.
+ * 2. The server should do some logging. 
  */
 public class SecureChatServer {
 
@@ -40,11 +43,14 @@ public class SecureChatServer {
 	public void GetKeys() throws Exception {
 		BufferedReader keys = new BufferedReader(new FileReader("pub_key.txt"));
 		try {
-			e = new BigInteger(keys.readLine().replaceAll("\\s+", "").substring(2));
-			n = new BigInteger(keys.readLine().replaceAll("\\s+", "").substring(2));
+			e = new BigInteger(keys.readLine().replaceAll("\\s+", "")
+					.substring(2));
+			n = new BigInteger(keys.readLine().replaceAll("\\s+", "")
+					.substring(2));
 			keys.close();
 			keys = new BufferedReader(new FileReader("pri_key.txt"));
-			d = new BigInteger(keys.readLine().replaceAll("\\s+", "").substring(2));
+			d = new BigInteger(keys.readLine().replaceAll("\\s+", "")
+					.substring(2));
 			keys.close();
 
 		} catch (FileNotFoundException e) {
@@ -54,26 +60,34 @@ public class SecureChatServer {
 	}
 
 	void KGen() {
-		k1 = BigInteger.probablePrime(128, rand).toByteArray();
-		k2 = BigInteger.probablePrime(128, rand).toByteArray();
+		k1 = BigInteger.probablePrime(127, rand).toByteArray();
+		k2 = BigInteger.probablePrime(127, rand).toByteArray();
 	}
 
-	public byte[] EncryptKs(byte[] b) throws Exception { // if user is NOT logged in
-		
-		BigInteger ciphertxt = new BigInteger(b);
-		ciphertxt=ciphertxt.modPow(e,n);
-		b=ciphertxt.toByteArray();				
+	// if user is NOT logged in
+	public static byte[] EncryptKs(byte[] b) throws Exception {
+//		BigInteger ciphertxt = new BigInteger(b);
+//		ciphertxt = ciphertxt.modPow(e, n);
+//		b = ciphertxt.toByteArray();
+		return b;
+	}
+
+	// if user is NOT logged in
+	public byte[] DecryptKs(byte[] b) throws Exception { 
+//		BigInteger ciphertxt = new BigInteger(b);
+//		ciphertxt = ciphertxt.modPow(d, n);
+//		b = ciphertxt.toByteArray();
 		return b;
 	}
 	
-	public byte[] DecryptKs(byte[] b) throws Exception { // if user is NOT logged in
-		
-		BigInteger ciphertxt = new BigInteger(b);
-		ciphertxt=ciphertxt.modPow(d,n);
-		b=ciphertxt.toByteArray();				
+	public static byte[] EncryptK1(byte[] b) { // if user IS logged in
 		return b;
 	}
 	
+	public static byte[] EncryptK2(byte[] b) { // if user IS logged in
+		return b;
+	}
+
 	/**
 	 * The port that the server listens on.
 	 */
@@ -86,11 +100,11 @@ public class SecureChatServer {
 	private static HashSet<String> names = new HashSet<String>();
 
 	/**
-	 * The set of all the print writers for all the clients. This set is kept so
+	 * The set of all the DataOutputStreams for all the clients. This set is kept so
 	 * we can easily broadcast messages.
 	 */
-	// private static HashSet<PrintWriter> writers = new HashSet<PrintWriter>();
-	private static HashSet<DataOutputStream> byteWriters = new HashSet<DataOutputStream>();
+	//private static HashSet<DataOutputStream> byteWriters = new HashSet<DataOutputStream>();
+	private static HashMap<DataOutputStream, String> clientConnections = new HashMap<DataOutputStream, String>();
 
 	/**
 	 * The appplication main method, which just listens on a port and spawns
@@ -136,8 +150,6 @@ public class SecureChatServer {
 	private static class Handler extends Thread {
 		private String name;
 		private Socket socket;
-		// private BufferedReader in;
-		// private PrintWriter out;
 		private DataOutputStream dos;
 		private DataInputStream dis;
 
@@ -148,6 +160,7 @@ public class SecureChatServer {
 
 		public void sendBytes(byte[] myByteArray, int start, int len,
 				DataOutputStream ldos) throws IOException {
+
 			ldos.writeInt(len);
 			if (len > 0) {
 				ldos.write(myByteArray, start, len);
@@ -169,84 +182,172 @@ public class SecureChatServer {
 		 * repeatedly gets inputs and broadcasts them.
 		 */
 		public void run() {
+			boolean valid = false;
 			try {
-
-				// Create character streams for the socket.
-				// in = new BufferedReader(new InputStreamReader(
-				// socket.getInputStream()));
-				// out = new PrintWriter(socket.getOutputStream(), true);
+				// Create data streams for the socket.
 				InputStream inStream = socket.getInputStream();
 				dis = new DataInputStream(inStream);
 
 				OutputStream outStream = socket.getOutputStream();
 				dos = new DataOutputStream(outStream);
 
-				// Request a name from this client. Keep requesting until
-				// a name is submitted that is not already used. Note that
-				// checking for the existence of a name and adding the name
-				// must be done while locking the set of names.
+				// Wait for a login name and password from this client. 					
+				while (true) //login loop
+				{
+					System.out.println("server receiver waiting for login dis.readInt()");
+					int len = dis.readInt();
+					byte[] data = new byte[len];
+					if (len > 0) {
+						System.out.println("server reading data");
+						dis.readFully(data);
+					} else
+						return;
 
-				/*
-				 * while (true) { out.println("SUBMITNAME"); name =
-				 * in.readLine(); if (name == null) { return; } synchronized
-				 * (names) { if (!names.contains(name)) { names.add(name);
-				 * break; } } }
-				 */
+					// use server private key to decrypt 'data'
 
-				// Now that a successful name has been chosen, add the
-				// socket's print writer to the set of all writers so
-				// this client can receive broadcast messages.
-				// out.println("NAMEACCEPTED");
-				// writers.add(out);
-				byteWriters.add(dos);
+					//Separate input data into components
+					int lenOfmsgOut = 0;
+					byte blomOut;
+					byte[] b16in = new byte[data.length - 17];
+					byte[] Ks = new byte[16];
+
+					blomOut = data[0];
+					System.arraycopy(data, 1, b16in, 0, b16in.length);
+					System.arraycopy(data, 1 + b16in.length, Ks, 0, 16);
+					int lom = (int) blomOut;
+
+					// login test process goes here
+
+					System.out.println(lom);
+					System.out.println(new String(b16in));
+					System.out.println(new String(Ks));
+
+					
+					//return k1 k2 and Ks to the client
+					// generate this string from k1 k2 encoded using Ks
+					String k1k2 = "12345678123456781234567812345678"; //bogus data
+					
+					byte[] retData = k1k2.getBytes();
+					
+					int msgSize = retData.length;
+					byte size = (byte)msgSize;
+					int numBlock = (int) Math.ceil((double)msgSize / 16.0f);
+					byte[] b16 = new byte[numBlock * 16];
+					System.arraycopy( retData, 0, b16, 0, retData.length );	
+					byte[] c = new byte[1 + numBlock*16 + 16];
+					c[0] =  size;
+					System.arraycopy(b16, 0, c, 1, b16.length);
+					System.arraycopy(Ks, 0, c, c.length-16, 16);
+					
+					//send login response c back to the client
+					sendBytes(c, dos);
+					
+					// test if user is on name password list
+					
+					String name = new String(Ks); //temp for testing
+					if (true) {
+						valid = true;
+						//byteWriters.add(dos);
+						clientConnections.put(dos, name);
+						break;
+					}			
+				}
+				
 
 				// Accept messages from this client and broadcast them.
 				// Ignore other clients that cannot be broadcasted to.
-				while (true) {
-					// String input = in.readLine();
+				while (valid) {
+					int len;
+					byte[] data = null;
+					byte[] k1 = null;
+					byte[] k2 = null;
+					int lenOfmsg;
+					int lom;
+					byte blom;
+					byte[] b16;
+					byte[] Ks;
+					byte[] MAC;
+					byte[] b;
 
 					System.out.println("receiver waiting for dis.readInt()");
-					int len = dis.readInt();
-					byte[] data = new byte[len];
+					len = dis.readInt();
+					data = new byte[len];
 					if (len > 0) {
 						dis.readFully(data);
 					} else
 						return;
 
-					// //
-					// decrypt
-					// split and check it or commands
+					lom = 0; //length of message
+					b16 = new byte[data.length - 17];
+					MAC = new byte[16];
 
-					System.out.println("test");
+					blom = data[0];
+					System.arraycopy(data, 1, b16, 0, b16.length);
+					System.arraycopy(data, 1 + b16.length, MAC, 0, 16);
+					lom = (int) blom;
+					
+					b = new byte[lom];
+					System.arraycopy(b16, 0, b, 0, lom);
 
-					// ////
-					if (true) {// *command is send*
-						String input = new String(data);
-						System.out.println(input);
+					// test for valid message here
+					// use k1 on b16out
+					// use k2 on MACout
+					
 
-						for (DataOutputStream bWriter : byteWriters) {
-							// writer.println("MESSAGE " + name + ": " + input);
-							byte[] tByte = ("MESSAGE " + input).getBytes();
-							// dos.writeInt(tByte.length);
-							// if (len > 0) {
-							// dos.write(tByte, 0, tByte.length);
-							// }
+					// if message is valid broadcast to everyone
+					if (true) {
+//						for (DataOutputStream bWriter : byteWriters) {
+//							//TODO make this so that it adds the client 
+//							//name to the message before broadcasting
+//							sendBytes(data, bWriter); 
+//						}
+						
+						for (Entry<DataOutputStream, String> cData : clientConnections.entrySet()) {
+							DataOutputStream cPipe = cData.getKey();
+						    String cName = cData.getValue();
+						    System.out.println(cName);
+						    
+		 //add cName to head of message 'mess' here
+						    				    					    
+							System.out.println("sending message " + new String(b));
+							MAC = new byte[16];
+							MessageDigest m = MessageDigest.getInstance("MD5");
+							m.update(b);
+							byte[] dig = m.digest();
+							
+							MAC = EncryptK2(dig);
+							b = EncryptK1(b);
+											
+							int msgSize = b.length;
+							byte size = (byte)msgSize;
+							int numBlock = (int) Math.ceil((double)msgSize / 16.0f);
+							b16 = new byte[numBlock * 16];
+							System.arraycopy( b, 0, b16, 0, b.length );
+							byte[] c = new byte[1 + numBlock*16 + 16];
+							
+							c[0] =  size;
+							System.arraycopy(b16, 0, c, 1, b.length);
+							System.arraycopy(MAC, 0, c, c.length-16, 16);
+							
+							c = EncryptKs(c);
+							System.out.println("sending message data to server");
 
-							sendBytes(tByte, bWriter);
+						    sendBytes(c, cPipe);
 						}
 					}
 
 				}
 			} catch (IOException e) {
 				System.out.println(e);
+			} catch (NoSuchAlgorithmException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			} finally {
-				// This client is going down! Remove its name and its print
-				// writer from the sets, and close its socket.
-				// if (name != null) {
-				// names.remove(name);
-				// }
 				if (dos != null) {
-					byteWriters.remove(dos);
+					clientConnections.remove(dos);
 				}
 				try {
 					socket.close();
