@@ -54,6 +54,7 @@ public class SecureChatServer {
 		for(int i = 0; i<16; i++){
 			temp[i] = (byte) (b[i] ^ Ks[i]);
 		}
+		//return temp;
 		return b;
 	}
 	
@@ -68,7 +69,7 @@ public class SecureChatServer {
 	}
 	
 	//XOR encrypts and decrypts
-	public static byte[] EncryptK2(byte[] b) { // if user IS logged in
+	public static byte[] EncryptK2(byte[] b) { 
 		byte temp[] = new byte[16];
 		for(int i = 0; i<16; i++){
 			temp[i] = (byte) (b[i] ^ k2[i]);
@@ -149,6 +150,8 @@ public class SecureChatServer {
 			newmap.put(columns[0], columns[1]);
 		}
 	}
+	
+
 
 	/**
 	 * A handler thread class. Handlers are spawned from the listening loop and
@@ -172,6 +175,29 @@ public class SecureChatServer {
 			if (len > 0) {
 				ldos.write(myByteArray, start, len);
 			}
+		}
+		
+		public void sendByteData(String msg, DataOutputStream dos) throws NoSuchAlgorithmException, IOException{
+		   	byte[] b=msg.getBytes();
+			byte[] MAC = new byte[16];										
+			int msgSize = b.length;
+			byte size = (byte)msgSize;
+			int numBlock = (int) Math.ceil((double)msgSize / 16.0f);
+			byte[]b16 = new byte[numBlock * 16];
+			System.arraycopy( b, 0, b16, 0, b.length );
+			byte[] c = new byte[1 + numBlock*16 + 16];
+			
+			// encrypt for broadcast
+			byte[] b16MD5server = MD5(b16);		//make a digest first							
+			MAC = EncryptK2(b16MD5server); 	// build a mac
+			b16 = EncryptK1(b16); 		// then encrypt
+								
+			c[0] =  size;
+			System.arraycopy(b16, 0, c, 1, b16.length);
+			System.arraycopy(MAC, 0, c, c.length-16, 16);
+			
+			//DataOutputStream cPipe = dos.getKey();
+		    sendBytes(c, dos);
 		}
 
 		/**
@@ -266,6 +292,8 @@ public class SecureChatServer {
 						int numBlock = (int) Math.ceil((double)msgSize / 16.0f);
 						byte[] b16 = new byte[32];
 						System.arraycopy( retKeys, 0, b16, 0, 32);	
+						System.out.println("b16= " + new String(b16));
+						
 						byte[] c = new byte[49];
 						c[0] =  size;
 						//System.out.println("sending c size= " + size);
@@ -331,26 +359,7 @@ public class SecureChatServer {
 						   	System.out.println(msg);
 						   	System.out.println("The received encrypted message is: " + encryptM);
 						   	
-						   	b=msg.getBytes();
-							MAC = new byte[16];										
-							int msgSize = b.length;
-							byte size = (byte)msgSize;
-							int numBlock = (int) Math.ceil((double)msgSize / 16.0f);
-							b16 = new byte[numBlock * 16];
-							System.arraycopy( b, 0, b16, 0, b.length );
-							byte[] c = new byte[1 + numBlock*16 + 16];
-							
-							// encrypt for broadcast
-							byte[] b16MD5server = MD5(b16);		//make a digest first							
-							MAC = EncryptK2(b16MD5server); 	// build a mac
-							b16 = EncryptK1(b16); 		// then encrypt
-												
-							c[0] =  size;
-							System.arraycopy(b16, 0, c, 1, b16.length);
-							System.arraycopy(MAC, 0, c, c.length-16, 16);
-							
-							DataOutputStream cPipe = cData.getKey();
-						    sendBytes(c, cPipe);
+						    sendByteData(msg, cData.getKey());
 						}
 					} else if(command.equals("who")){						
 						int numClients = clientConnections.size();
@@ -369,52 +378,15 @@ public class SecureChatServer {
 							System.out.println("adding name " + names[i]);
 						}
 						
-						b=mess.getBytes();
-						MAC = new byte[16];										
-						int msgSize = b.length;
-						byte size = (byte)msgSize;
-						int numBlock = (int) Math.ceil((double)msgSize / 16.0f);
-						b16 = new byte[numBlock * 16];
-						System.arraycopy( b, 0, b16, 0, b.length );
-						byte[] c = new byte[1 + numBlock*16 + 16];
-						
-						// encrypt for broadcast
-						byte[] b16MD5server = MD5(b16);		//make a digest first						
-						MAC = EncryptK2(b16MD5server); 	// build a mac
-						b16 = EncryptK1(b16); 		// then encrypt
-											
-						c[0] =  size;
-						System.arraycopy(b16, 0, c, 1, b16.length);
-						System.arraycopy(MAC, 0, c, c.length-16, 16);
-
-					    sendBytes(c, dos);
-						 // who code
-						//System.out.println("doing who command");
+					    sendByteData(mess, dos);
 					} else if(command.equals("logout")){
 						String cName = clientConnections.get(dos);
 						for (Entry<DataOutputStream, String> cData : clientConnections.entrySet()) {						    
 						   	message = cName.concat(" left");
 						    
-						   	b=message.getBytes();
-							MAC = new byte[16];										
-							int msgSize = b.length;
-							byte size = (byte)msgSize;
-							int numBlock = (int) Math.ceil((double)msgSize / 16.0f);
-							b16 = new byte[numBlock * 16];
-							System.arraycopy( b, 0, b16, 0, b.length );
-							byte[] c = new byte[1 + numBlock*16 + 16];
-							
-							// encrypt for broadcast
-							byte[] b16MD5server = MD5(b16);		//make a digest first								
-							MAC = EncryptK2(b16MD5server); 	// build a mac
-							b16 = EncryptK1(b16); 		// then encrypt
-												
-							c[0] =  size;
-							System.arraycopy(b16, 0, c, 1, b16.length);
-							System.arraycopy(MAC, 0, c, c.length-16, 16);
-							
-							DataOutputStream cPipe = cData.getKey();
-						    sendBytes(c, cPipe);
+						    sendByteData(message, cData.getKey());
+						    k1 = null;
+						    k2 = null;
 						}
 						dos.close();
 						clientConnections.remove(dos);
