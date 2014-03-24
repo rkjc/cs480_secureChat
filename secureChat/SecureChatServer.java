@@ -342,13 +342,16 @@ public class SecureChatServer {
 
 					// if message is valid broadcast to everyone
 					if (command.equals("send")) {
+						String cName = clientConnections.get(dos);
 						for (Entry<DataOutputStream, String> cData : clientConnections.entrySet()) {
 							DataOutputStream cPipe = cData.getKey();
-						    String cName = cData.getValue();
-						    System.out.println(cName);
+//						    String cName = cData.getValue();
+//						    System.out.println(cName);
 						    
 		 //add cName to head of message 'mess' here
-						   	message = cName.concat(": " + message);	    					    
+						   	message = cName.concat(": " + message.substring(5));
+						    b=message.getBytes();
+						   	
 							System.out.println("sending message " + message);
 							MAC = new byte[16];
 							MessageDigest m = MessageDigest.getInstance("MD5");
@@ -420,7 +423,8 @@ public class SecureChatServer {
 						 // who code
 						System.out.println("doing who command");
 					} else if(command.equals("logout")){
-						// logout code
+						dos.close();
+						clientConnections.remove(dos);
 						System.out.println("doing logout command");
 					} else {
 						command = "";
