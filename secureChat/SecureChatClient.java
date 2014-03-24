@@ -87,7 +87,7 @@ public class SecureChatClient {
 	public static boolean equalBytes(byte[] a, byte[] b){
 		boolean pass = true;
 		for(int i = 0; i < a.length; i++) {
-			if(!a.equals(b)){
+			if(a[i] != b[i]){
 				pass = false;
 				break;
 			}			
@@ -147,6 +147,7 @@ public class SecureChatClient {
 				try {
 					if (k1 == null) {// not logged in
 						System.out.println("logging in with " + new String(b));
+						messageArea.append(new String(b) + "\n");
 						int msgSize = b.length;
 						byte size = (byte)msgSize;
 						int numBlock = (int) Math.ceil((double)msgSize / 16.0f);
@@ -161,6 +162,7 @@ public class SecureChatClient {
 						c = EncryptKs(c);
 											
 						System.out.println("sending login data to server");
+						System.out.println("sending Ks= " + new String(Ks));
 						sendBytes(c);
 					} else {
 					// logged in	
@@ -258,7 +260,7 @@ public class SecureChatClient {
 		int lom;
 		byte blom;
 		byte[] b16;
-		byte[] Ks;
+		//byte[] Ks;
 		byte[] MAC;
 		
 		// Make connection and initialize streams
@@ -282,36 +284,26 @@ public class SecureChatClient {
 			}
 			
 			lenOfmsg = 0;
-			b16 = new byte[data.length - 17];
-			byte[] KsMD5 = new byte[16];
-			
-			System.out.println("b16.length " + b16.length);
-	
+			byte[] KsMD5in = new byte[16];
+			b16 = new byte[32];
+
 			blom = data[0];
 			System.arraycopy(data, 1, b16, 0, 32);
-			System.arraycopy(data, 17, KsMD5, 0, 16);
+			System.arraycopy(data, 33, KsMD5in, 0, 16);
 			
-			System.out.println("KsMD5 " + new String(KsMD5));
-			System.out.println("b16 MD5 " + new String(MD5(b16)));
-			
-			lom = (int) blom;
-			
+			lom = (int) blom;			
 			k1 = new byte[16];
 			k2 = new byte[16];
 			
 			System.arraycopy(b16, 0, k1, 0, 16);
 			System.arraycopy(b16, 16, k2, 0, 16);
 			
-			System.out.println("k1 " + new String(k1));
-			System.out.println("k2 " + new String(k2));
-			
-			
-			
-			if(true){  //(Ks == getKs()){
+			if(equalBytes(KsMD5in, MD5(Ks))){  
 				setk1(k1);
 				setk2(k2);
 				loggedin = true;
 				System.out.println("client is logged in");
+				messageArea.append("login confirmed\n");
 			}		
 		}
 

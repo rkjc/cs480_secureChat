@@ -235,14 +235,16 @@ public class SecureChatServer {
 					String message = "";
 					String s = new String(b16in);
 					byte[] retKeys= new byte[48];
-
+					for(int i = 0; i < 48; i++){
+						retKeys[i] = (byte)0;
+					}
 					
 					//initialize this message to all zeros.
 					//Chat client interprets all zeros as an invalid response
 					
-					
+					System.out.println("check login keyword");
 					if (s.startsWith("login ")) {
-						System.out.println("login test");
+						System.out.println("running login test");
 						message = s.substring(6);
 						System.out.println("message= " + message);
 
@@ -259,9 +261,10 @@ public class SecureChatServer {
 							k1 = EncryptKs(k1, Ks);
 							k2 = EncryptKs(k2, Ks);
 							Ks = MD5(Ks);
+							System.out.println("Ks MD5 = " + new String(Ks));
 							System.arraycopy(k1, 0, retKeys, 0, 16);
 							System.arraycopy(k2, 0, retKeys, 16, 16);
-							System.arraycopy(Ks, 0, retKeys, 3, 16);
+							//System.arraycopy(Ks, 0, retKeys, 3, 16);
 							//login is valid
 							valid = true;
 							//add this connection and username to the pool
@@ -272,15 +275,16 @@ public class SecureChatServer {
 					}					
 					
 					//return k1 k2 and digest(Ks) to the client	
-					byte[] retData = message.getBytes();
+					//byte[] retData = message.getBytes();
 					
-					int msgSize = retData.length;
+					int msgSize = retKeys.length;
 					byte size = (byte)msgSize;
 					int numBlock = (int) Math.ceil((double)msgSize / 16.0f);
-					byte[] b16 = new byte[numBlock * 16];
-					System.arraycopy( retData, 0, b16, 0, retData.length );	
-					byte[] c = new byte[1 + numBlock*16 + 16];
+					byte[] b16 = new byte[32];
+					System.arraycopy( retKeys, 0, b16, 0, 32);	
+					byte[] c = new byte[49];
 					c[0] =  size;
+					System.out.println("sending c size= " + size);
 					System.arraycopy(b16, 0, c, 1, b16.length);
 					System.arraycopy(Ks, 0, c, c.length-16, 16);
 					

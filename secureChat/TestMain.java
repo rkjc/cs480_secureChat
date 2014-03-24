@@ -1,4 +1,6 @@
 package secureChat;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.*; 
 import java.math.*;
 import java.nio.charset.Charset;
@@ -6,22 +8,47 @@ import java.nio.charset.Charset;
 import javax.xml.bind.DatatypeConverter;
 
 public class TestMain {
+	
+	public static boolean equalBytes(byte[] a, byte[] b){
+		boolean pass = true;
+		for(int i = 0; i < a.length; i++) {
+			if(!a.equals(b)){
+				pass = false;
+				break;
+			}			
+		}
+		return pass;
+	}
+	
+	public static byte[] MD5(byte[] b) throws NoSuchAlgorithmException{
+		MessageDigest m = MessageDigest.getInstance("MD5");
+		m.update(b);
+		return m.digest();
+	}
 
-	public static void main(String[] args) {
+	public static void main(String[] args) throws NoSuchAlgorithmException {
 		
-		String message = "";
-		String s = "login r q       ";
+		byte[] Ks1MD5= new byte[1];
+		byte[] Ks1 = new byte[1];
+		byte[] Ks = new byte[1];
+		byte[] KsMD5= new byte[1];
+
+		Ks1[0] = (byte)7;
+		Ks[0] = (byte)7;
+		Ks1MD5 = MD5(Ks1);
+		KsMD5 = MD5(Ks1);
 		
-		message = s.substring(6);
-		System.out.println("message= " + message);
+		
+		System.out.println("Ks[0] " + Ks[0]);
+		System.out.println("Ks1[0] " + Ks1[0]);
+		System.out.println("KsMD5 " + KsMD5);
+		System.out.println("Ks1MD5 " + Ks1MD5);
+		
+		System.out.println("KsMD5 == Ks1MD5  " + (KsMD5[0] == Ks1MD5[0]));
+		System.out.println("Ks[0] == Ks1MD5  " + (Ks[0] == Ks1MD5[0]));
+		
 
 		
-		// send to the server (cmd, user, pass, Ks)
-		String[] columns = message.split(" ");
-		String username = columns[0];
-		String password = columns[1];
-		
-		System.out.println("username= " + username);
 		
 //		###################################################################
 													
