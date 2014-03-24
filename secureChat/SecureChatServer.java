@@ -261,7 +261,7 @@ public class SecureChatServer {
 							Ks = MD5(Ks);
 							System.arraycopy(k1, 0, retKeys, 0, 16);
 							System.arraycopy(k2, 0, retKeys, 16, 16);
-							System.arraycopy(Ks, 0, retKeys, 32, 16);
+							System.arraycopy(Ks, 0, retKeys, 3, 16);
 							//login is valid
 							valid = true;
 							//add this connection and username to the pool

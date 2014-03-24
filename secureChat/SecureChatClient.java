@@ -83,6 +83,23 @@ public class SecureChatClient {
 			e.printStackTrace();
 		}
 	}
+	
+	public static boolean equalBytes(byte[] a, byte[] b){
+		boolean pass = true;
+		for(int i = 0; i < a.length; i++) {
+			if(!a.equals(b)){
+				pass = false;
+				break;
+			}			
+		}
+		return pass;
+	}
+	
+	public static byte[] MD5(byte[] b) throws NoSuchAlgorithmException{
+		MessageDigest m = MessageDigest.getInstance("MD5");
+		m.update(b);
+		return m.digest();
+	}
 
 	public void sendBytes(byte[] myByteArray) throws IOException {
 		sendBytes(myByteArray, 0, myByteArray.length);
@@ -230,8 +247,9 @@ public class SecureChatClient {
 
 	/**
 	 * Connects to the server then enters the processing loop.
+	 * @throws NoSuchAlgorithmException 
 	 */
-	private void run() throws IOException {
+	private void run() throws IOException, NoSuchAlgorithmException {
 		int len;
 		byte[] data = null;
 		byte[] k1 = null;
@@ -265,11 +283,17 @@ public class SecureChatClient {
 			
 			lenOfmsg = 0;
 			b16 = new byte[data.length - 17];
-			Ks = new byte[16];
+			byte[] KsMD5 = new byte[16];
+			
+			System.out.println("b16.length " + b16.length);
 	
 			blom = data[0];
-			System.arraycopy(data, 1, b16, 0, b16.length);
-			System.arraycopy(data, 1 + b16.length, Ks, 0, 16);
+			System.arraycopy(data, 1, b16, 0, 32);
+			System.arraycopy(data, 17, KsMD5, 0, 16);
+			
+			System.out.println("KsMD5 " + new String(KsMD5));
+			System.out.println("b16 MD5 " + new String(MD5(b16)));
+			
 			lom = (int) blom;
 			
 			k1 = new byte[16];
@@ -280,7 +304,8 @@ public class SecureChatClient {
 			
 			System.out.println("k1 " + new String(k1));
 			System.out.println("k2 " + new String(k2));
-			System.out.println("Ks " + new String(Ks));
+			
+			
 			
 			if(true){  //(Ks == getKs()){
 				setk1(k1);
