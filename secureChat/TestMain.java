@@ -28,27 +28,24 @@ public class TestMain {
 
 	public static void main(String[] args) throws NoSuchAlgorithmException {
 		
-		byte[] Ks1MD5= new byte[1];
-		byte[] Ks1 = new byte[1];
-		byte[] Ks = new byte[1];
-		byte[] KsMD5= new byte[1];
-
-		Ks1[0] = (byte)7;
-		Ks[0] = (byte)7;
-		Ks1MD5 = MD5(Ks1);
-		KsMD5 = MD5(Ks1);
+		String[] n = new String[3];
+		n[0] = "a";
+		n[1] = "b";
+		n[1] = "c";
 		
 		
-		System.out.println("Ks[0] " + Ks[0]);
-		System.out.println("Ks1[0] " + Ks1[0]);
-		System.out.println("KsMD5 " + KsMD5);
-		System.out.println("Ks1MD5 " + Ks1MD5);
+		String mess = "";
 		
-		System.out.println("KsMD5 == Ks1MD5  " + (KsMD5[0] == Ks1MD5[0]));
-		System.out.println("Ks[0] == Ks1MD5  " + (Ks[0] == Ks1MD5[0]));
+		for(int i = 1; i<n.length; i++){					
+			mess.concat(", " + n[i]);
+		}
 		
-
+		for(int i = 1; i<3; i++){					
+			mess.concat(", " + n[i]);
+		}
 		
+		String res = mess.concat("things");
+		System.out.println(res);
 		
 //		###################################################################
 													

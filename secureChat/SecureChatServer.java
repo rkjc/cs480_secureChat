@@ -348,7 +348,7 @@ public class SecureChatServer {
 						    System.out.println(cName);
 						    
 		 //add cName to head of message 'mess' here
-						    				    					    
+						   	message = cName.concat(": " + message);	    					    
 							System.out.println("sending message " + message);
 							MAC = new byte[16];
 							MessageDigest m = MessageDigest.getInstance("MD5");
@@ -375,12 +375,56 @@ public class SecureChatServer {
 						    sendBytes(c, cPipe);
 						}
 					} else if(command.equals("who")){
+						
+						int numClients = clientConnections.size();
+						String[] names = new String[numClients];
+						String mess = "who\n";
+						int count = 0;
+						for (Entry<DataOutputStream, String> cData : clientConnections.entrySet()) {						
+							names[count] = cData.getValue();
+							System.out.println("names in list " + names[count]);
+							count++;
+						}
+						
+						mess = mess.concat(names[0]);
+						for(int i = 1; i<names.length; i++){					
+							mess = mess.concat(", " + names[i]);
+							System.out.println("adding name " + names[i]);
+						}
+						
+						System.out.println("sending message " + mess);
+						MAC = new byte[16];
+						MessageDigest m = MessageDigest.getInstance("MD5");
+						m.update(b);
+						byte[] dig = m.digest();
+						
+						MAC = EncryptK2(dig);
+						//b = EncryptK1(b);
+						
+						b = mess.getBytes();
+						int msgSize = b.length;
+						byte size = (byte)msgSize;
+						int numBlock = (int) Math.ceil((double)msgSize / 16.0f);
+						b16 = new byte[numBlock * 16];
+						System.arraycopy( b, 0, b16, 0, b.length );
+						byte[] c = new byte[1 + numBlock*16 + 16];
+						
+						c[0] =  size;
+						System.arraycopy(b16, 0, c, 1, b.length);
+						System.arraycopy(MAC, 0, c, c.length-16, 16);
+						
+						//c = EncryptKs(c);
+						System.out.println("sending message data to server");
+
+					    sendBytes(c, dos);
 						 // who code
 						System.out.println("doing who command");
 					} else if(command.equals("logout")){
 						// logout code
 						System.out.println("doing logout command");
-					} 
+					} else {
+						command = "";
+					}
 
 				}
 			} catch (IOException e) {
