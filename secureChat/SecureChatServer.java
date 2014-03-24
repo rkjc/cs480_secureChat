@@ -75,9 +75,9 @@ public class SecureChatServer {
 	
 	//XOR encrypts and decrypts
 	public static byte[] EncryptK1(byte[] b) {
-		byte temp[] = new byte[16];
-		for(int i = 0; i<16; i++){
-			temp[i] = (byte) (b[i] ^ k1[i]);
+		byte temp[] = new byte[b.length];
+		for(int i = 0; i<b.length; i++){
+			temp[i] = (byte) (b[i] ^ k1[i%16]);
 		}
 		return b;
 	}
@@ -89,6 +89,17 @@ public class SecureChatServer {
 			temp[i] = (byte) (b[i] ^ k2[i]);
 		}
 		return b;
+	}
+	
+	public static boolean equalBytes(byte[] a, byte[] b){
+		boolean pass = true;
+		for(int i = 0; i < a.length; i++) {
+			if(a[i] != b[i]){
+				pass = false;
+				break;
+			}			
+		}
+		return pass;
 	}
 	
 	public static byte[] MD5(byte[] b) throws NoSuchAlgorithmException{
@@ -121,7 +132,7 @@ public class SecureChatServer {
 	public static void main(String[] args) throws Exception {
 		LoadUsers();
 
-		System.out.println("The chat server is running.");
+		//System.out.println("The chat server is running.");
 		ServerSocket listener = new ServerSocket(PORT);
 		KGen();
 		try {
@@ -202,11 +213,11 @@ public class SecureChatServer {
 				// Wait for a login name and password from this client. 					
 				while (! valid) //login loop
 				{
-					System.out.println("server receiver waiting for login dis.readInt()");
+					//System.out.println("server receiver waiting for login dis.readInt()");
 					int len = dis.readInt();
 					byte[] data = new byte[len];
 					if (len > 0) {
-						System.out.println("server reading data");
+						//System.out.println("server reading data");
 						dis.readFully(data);
 					} else
 						return;
@@ -228,9 +239,9 @@ public class SecureChatServer {
 
 					// login test process goes here
 
-					System.out.println("lom= " + lom);
-					System.out.println("b16in= " + new String(b16in));
-					System.out.println("Ks= " + new String(Ks));
+					//System.out.println("lom= " + lom);
+					//System.out.println("b16in= " + new String(b16in));
+					//System.out.println("Ks= " + new String(Ks));
 					
 					String message = "";
 					String s = new String(b16in);
@@ -242,11 +253,11 @@ public class SecureChatServer {
 					//initialize this message to all zeros.
 					//Chat client interprets all zeros as an invalid response
 					
-					System.out.println("check login keyword");
+					//System.out.println("check login keyword");
 					if (s.startsWith("login ")) {
-						System.out.println("running login test");
+						//System.out.println("running login test");
 						message = s.substring(6);
-						System.out.println("message= " + message);
+						//System.out.println("message= " + message);
 
 						
 						// send to the server (cmd, user, pass, Ks)
@@ -255,7 +266,7 @@ public class SecureChatServer {
 						String password = columns[1].trim();
 						
 						if (newmap.containsKey(username) && newmap.get(username).equals(password)) {	
-							System.out.println("login confirmed");
+							//System.out.println("login confirmed");
 							System.out.println(username + " login.");
 							System.out.println("K1=" + (new String(k1)) + "  K2=" + (new String(k2)) + " are sent out");
 							k1 = EncryptKs(k1, Ks);
@@ -264,13 +275,13 @@ public class SecureChatServer {
 							System.out.println("Ks MD5 = " + new String(Ks));
 							System.arraycopy(k1, 0, retKeys, 0, 16);
 							System.arraycopy(k2, 0, retKeys, 16, 16);
-							//System.arraycopy(Ks, 0, retKeys, 3, 16);
+							
 							//login is valid
 							valid = true;
 							//add this connection and username to the pool
 							clientConnections.put(dos, username);
 						} else {
-							System.out.println("login invalid");
+							//System.out.println("login invalid");
 						}
 					}					
 					
@@ -284,7 +295,7 @@ public class SecureChatServer {
 					System.arraycopy( retKeys, 0, b16, 0, 32);	
 					byte[] c = new byte[49];
 					c[0] =  size;
-					System.out.println("sending c size= " + size);
+					//System.out.println("sending c size= " + size);
 					System.arraycopy(b16, 0, c, 1, b16.length);
 					System.arraycopy(Ks, 0, c, c.length-16, 16);
 					
@@ -310,7 +321,7 @@ public class SecureChatServer {
 					byte[] MAC;
 					byte[] b;
 
-					System.out.println("receiver waiting for dis.readInt()");
+					//System.out.println("receiver waiting for dis.readInt()");
 					len = dis.readInt();
 					data = new byte[len];
 					if (len > 0) {
@@ -352,14 +363,11 @@ public class SecureChatServer {
 						   	message = cName.concat(": " + message.substring(5));
 						    b=message.getBytes();
 						   	
-							System.out.println("sending message " + message);
+							//System.out.println("sending message " + message);
 							MAC = new byte[16];
 							MessageDigest m = MessageDigest.getInstance("MD5");
 							m.update(b);
-							byte[] dig = m.digest();
 							
-							MAC = EncryptK2(dig);
-							//b = EncryptK1(b);
 											
 							int msgSize = b.length;
 							byte size = (byte)msgSize;
@@ -368,12 +376,16 @@ public class SecureChatServer {
 							System.arraycopy( b, 0, b16, 0, b.length );
 							byte[] c = new byte[1 + numBlock*16 + 16];
 							
+							byte[] dig = MD5(b16);
+							b16 = EncryptK1(b16);
+							MAC = EncryptK2(dig);
+							
 							c[0] =  size;
 							System.arraycopy(b16, 0, c, 1, b.length);
 							System.arraycopy(MAC, 0, c, c.length-16, 16);
 							
 							//c = EncryptKs(c);
-							System.out.println("sending message data to server");
+							//System.out.println("sending message data to server");
 
 						    sendBytes(c, cPipe);
 						}
@@ -385,17 +397,17 @@ public class SecureChatServer {
 						int count = 0;
 						for (Entry<DataOutputStream, String> cData : clientConnections.entrySet()) {						
 							names[count] = cData.getValue();
-							System.out.println("names in list " + names[count]);
+							//System.out.println("names in list " + names[count]);
 							count++;
 						}
 						
 						mess = mess.concat(names[0]);
 						for(int i = 1; i<names.length; i++){					
 							mess = mess.concat(", " + names[i]);
-							System.out.println("adding name " + names[i]);
+							//System.out.println("adding name " + names[i]);
 						}
 						
-						System.out.println("sending message " + mess);
+						//System.out.println("sending message " + mess);
 						MAC = new byte[16];
 						MessageDigest m = MessageDigest.getInstance("MD5");
 						m.update(b);
@@ -417,15 +429,15 @@ public class SecureChatServer {
 						System.arraycopy(MAC, 0, c, c.length-16, 16);
 						
 						//c = EncryptKs(c);
-						System.out.println("sending message data to server");
+						//System.out.println("sending message data to server");
 
 					    sendBytes(c, dos);
 						 // who code
-						System.out.println("doing who command");
+						//System.out.println("doing who command");
 					} else if(command.equals("logout")){
 						dos.close();
 						clientConnections.remove(dos);
-						System.out.println("doing logout command");
+						//System.out.println("doing logout command");
 					} else {
 						command = "";
 					}

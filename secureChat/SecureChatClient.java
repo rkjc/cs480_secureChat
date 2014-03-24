@@ -96,7 +96,6 @@ public class SecureChatClient {
 	}
 	
 	
-	
 	public static byte[] MD5(byte[] b) throws NoSuchAlgorithmException{
 		MessageDigest m = MessageDigest.getInstance("MD5");
 		m.update(b);
@@ -148,7 +147,7 @@ public class SecureChatClient {
 				// encrypt here
 				try {
 					if (k1 == null) {// not logged in
-						System.out.println("logging in with " + new String(b));
+//						System.out.println("logging in with " + new String(b));
 						messageArea.append(new String(b) + "\n");
 						int msgSize = b.length;
 						byte size = (byte)msgSize;
@@ -163,12 +162,12 @@ public class SecureChatClient {
 						// encrypt c using server public key					
 						c = EncryptKs(c);
 											
-						System.out.println("sending login data to server");
-						System.out.println("sending Ks= " + new String(Ks));
+//						System.out.println("sending login data to server");
+//						System.out.println("sending Ks= " + new String(Ks));
 						sendBytes(c);
 					} else {
 					// logged in	
-						System.out.println("sending message " + new String(b));
+//						System.out.println("sending message " + new String(b));
 						byte[] MAC = new byte[16];
 						MessageDigest m = MessageDigest.getInstance("MD5");
 						m.update(b);
@@ -190,7 +189,7 @@ public class SecureChatClient {
 						System.arraycopy(Ks, 0, c, c.length-16, 16);
 						
 						b = EncryptKs(c);
-						System.out.println("sending message data to server");
+//						System.out.println("sending message data to server");
 						sendBytes(b);								
 					}
 				} catch (Exception e1) {
@@ -278,7 +277,7 @@ public class SecureChatClient {
 		boolean loggedin = false;
 		while(! loggedin){
 			//catch response to login request
-			System.out.println("client receiver waiting for login response dis.readInt()");
+//			System.out.println("client receiver waiting for login response dis.readInt()");
 			len = dis.readInt();
 			data = new byte[len];
 			if (len > 0) {
@@ -304,7 +303,7 @@ public class SecureChatClient {
 				setk1(k1);
 				setk2(k2);
 				loggedin = true;
-				System.out.println("client is logged in");
+//				System.out.println("client is logged in");
 				messageArea.append("login confirmed\n");
 			}		
 		}
@@ -312,7 +311,7 @@ public class SecureChatClient {
 		// Process all messages from server, according to the protocol.
 		while (true) {
 			// String line = in.readLine();
-			System.out.println("client receiver waiting for dis.readInt()");
+//			System.out.println("client receiver waiting for dis.readInt()");
 			len = dis.readInt();
 			data = new byte[len];
 			if (len > 0) {
@@ -328,9 +327,16 @@ public class SecureChatClient {
 			System.arraycopy(data, 1 + b16.length, MAC, 0, 16);
 			lom = (int) blom;
 			
-			System.out.println("b16 " + new String(b16));
-			System.out.println("length of message " + lom);
-			System.out.println("MAC " + new String(MAC));
+			
+			b16 = EncryptK1(b16); //decrypt b16
+			byte[] digMess = MD5(b16); //make digest
+			byte[] digMAC = EncryptK2(MAC); //decrypt digest
+			//compare
+			
+//			System.out.println("compare " + equalBytes(digMess, digMAC));
+//			System.out.println("b16 " + new String(b16));
+//			System.out.println("length of message " + lom);
+//			System.out.println("MAC " + new String(MAC));
 			
 			//decrypt using k1 and k2
 			//print to UI if MAC is valid
