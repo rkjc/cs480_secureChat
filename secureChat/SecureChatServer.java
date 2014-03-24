@@ -334,15 +334,14 @@ public class SecureChatServer {
 					// use k1 on b16out
 					// use k2 on MACout
 					
+						
+						String message = new String(b);
+						String[] columns = message.split(" ");
+						String command = columns[0];			
+			
 
 					// if message is valid broadcast to everyone
-					if (true) {
-//						for (DataOutputStream bWriter : byteWriters) {
-//							//TODO make this so that it adds the client 
-//							//name to the message before broadcasting
-//							sendBytes(data, bWriter); 
-//						}
-						
+					if (command.equals("send")) {
 						for (Entry<DataOutputStream, String> cData : clientConnections.entrySet()) {
 							DataOutputStream cPipe = cData.getKey();
 						    String cName = cData.getValue();
@@ -350,14 +349,14 @@ public class SecureChatServer {
 						    
 		 //add cName to head of message 'mess' here
 						    				    					    
-							System.out.println("sending message " + new String(b));
+							System.out.println("sending message " + message);
 							MAC = new byte[16];
 							MessageDigest m = MessageDigest.getInstance("MD5");
 							m.update(b);
 							byte[] dig = m.digest();
 							
 							MAC = EncryptK2(dig);
-							b = EncryptK1(b);
+							//b = EncryptK1(b);
 											
 							int msgSize = b.length;
 							byte size = (byte)msgSize;
@@ -375,7 +374,13 @@ public class SecureChatServer {
 
 						    sendBytes(c, cPipe);
 						}
-					}
+					} else if(command.equals("who")){
+						 // who code
+						System.out.println("doing who command");
+					} else if(command.equals("logout")){
+						// logout code
+						System.out.println("doing logout command");
+					} 
 
 				}
 			} catch (IOException e) {

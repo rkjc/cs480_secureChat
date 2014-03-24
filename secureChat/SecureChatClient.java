@@ -95,6 +95,8 @@ public class SecureChatClient {
 		return pass;
 	}
 	
+	
+	
 	public static byte[] MD5(byte[] b) throws NoSuchAlgorithmException{
 		MessageDigest m = MessageDigest.getInstance("MD5");
 		m.update(b);
