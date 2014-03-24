@@ -16,14 +16,6 @@ import javax.swing.*;
  * with a text field for entering messages and a textarea to see the whole
  * dialog.
  * 
- * The client follows the Chat Protocol which is as follows. When the server
- * sends "SUBMITNAME" the client replies with the desired screen name. The
- * server will keep sending "SUBMITNAME" requests as long as the client submits
- * screen names that are already in use. When the server sends a line beginning
- * with "NAMEACCEPTED" the client is now allowed to start sending the server
- * arbitrary strings to be broadcast to all chatters connected to the server.
- * When the server sends a line beginning with "MESSAGE " then all characters
- * following this string should be displayed in its message area.
  */
 public class SecureChatClient {
 
@@ -114,19 +106,67 @@ public class SecureChatClient {
 		}
 	}
 
+	//XOR encrypts and decrypts
+	public static byte[] EncryptKs(byte[] b, byte[] Ks) {
+//		byte temp[] = new byte[16];
+//		for(int i = 0; i<16; i++){
+//			temp[i] = (byte) (b[i] ^ Ks[i]);
+//		}
+		return b;
+	}
+	
+	//XOR encrypts and decrypts
+	public static byte[] EncryptK1(byte[] b) {
+		byte temp[] = new byte[b.length];
+		for(int i = 0; i<b.length; i++){
+			temp[i] = (byte) (b[i] ^ k1[i%16]);
+		}
+		return temp;
+		// return b;
+	}
+	
+	//XOR encrypts and decrypts
+	public static byte[] EncryptK2(byte[] b) { // if user IS logged in
+		byte temp[] = new byte[16];
+		for(int i = 0; i<16; i++){
+			temp[i] = (byte) (b[i] ^ k2[i]);
+		}
+		return temp;
+		//return b;
+	}
+	
+	// applies the public key to a message
+	public static byte[] usePU(byte[] b){
+		return b;
+	}
+	
+	// applies a private key to a message
+	public static byte[] usePR(byte[] b){
+		return b;
+	}
+	
+	/**
+	 * Prompt for and return the address of the server.
+	 * 
+	 * @return
+	 * @throws Exception 
+	 */
+	private String getServerAddress() {
+		return (String) JOptionPane.showInputDialog(frame,
+				"Enter IP Address of the Server:", "Welcome to the Chatter",
+				JOptionPane.QUESTION_MESSAGE, null, null, "localhost");
+	}
+
 	
 	/**
 	 * Constructs the client by laying out the GUI and registering a listener
 	 * with the textfield so that pressing Return in the listener sends the
-	 * textfield contents to the server. Note however that the textfield is
-	 * initially NOT editable, and only becomes editable AFTER the client
-	 * receives the NAMEACCEPTED message from the server.
+	 * textfield contents to the server.
 	 */
 	public SecureChatClient() {
-		
-		KGen(); // makes the random key Ks
+		System.out.println("Secure chat room client.\n");
+		KGen(); // generates the random key Ks for this client
 		// Layout GUI
-		// textField.setEditable(false);
 		textField.setEditable(true);
 		messageArea.setEditable(false);
 		frame.getContentPane().add(textField, "North");
@@ -139,58 +179,59 @@ public class SecureChatClient {
 			 * Responds to pressing the enter key in the textfield by sending
 			 * the contents of the text field to the server. Then clear the text
 			 * area in preparation for the next message.
-			 */
-			
+			 */			
 			public void actionPerformed(ActionEvent e) {
-				byte[] b = (textField.getText()).getBytes();
+				String send = textField.getText();
+				byte[] b = (send).getBytes();
 				
-				// encrypt here
+				// if k1 has not been set then the client still needs to login
 				try {
 					if (k1 == null) {// not logged in
-//						System.out.println("logging in with " + new String(b));
-						messageArea.append(new String(b) + "\n");
-						int msgSize = b.length;
-						byte size = (byte)msgSize;
-						int numBlock = (int) Math.ceil((double)msgSize / 16.0f);
-						byte[] b16 = new byte[numBlock * 16];
-						System.arraycopy( b, 0, b16, 0, b.length );			
-						byte[] c = new byte[1 + numBlock*16 + 16];				
-						c[0] =  size;
-						System.arraycopy(b16, 0, c, 1, b.length);
-						System.arraycopy(Ks, 0, c, c.length-16, 16);
-						
-						// encrypt c using server public key					
-						c = EncryptKs(c);
-											
-//						System.out.println("sending login data to server");
-//						System.out.println("sending Ks= " + new String(Ks));
-						sendBytes(c);
+						String[] col = textField.getText().split(" ");
+						if(! col[0].equals("login")){
+							messageArea.append(col[0] + "\nDenied. Please login first.\n");
+						} else {
+							messageArea.append(new String(b) + "\n");
+							System.out.print("The encrypted message (" + col[1] + " " + col[2] + " and the session key " + new BigInteger(Ks) +") is: ");
+							int msgSize = b.length;
+							byte size = (byte)msgSize;
+							int numBlock = (int) Math.ceil((double)msgSize / 16.0f);
+							byte[] b16 = new byte[numBlock * 16];
+							System.arraycopy( b, 0, b16, 0, b.length );	
+							
+							byte[] d = new byte[b16.length + 16];
+							System.arraycopy(b16, 0, d, 0, b16.length);
+							System.arraycopy(Ks, 0, d, b16.length, 16);
+							
+							d = usePU(d); //encrypts using server public key
+							System.out.println(new String(d));
+							
+							byte[] c = new byte[1 + d.length];				
+							c[0] =  size;
+							System.arraycopy(d, 0, c, 1, d.length);
+																		
+							sendBytes(c);
+						}
 					} else {
-					// logged in	
-//						System.out.println("sending message " + new String(b));
-						byte[] MAC = new byte[16];
-						MessageDigest m = MessageDigest.getInstance("MD5");
-						m.update(b);
-						byte[] dig = m.digest();
-						
-						MAC = EncryptK2(dig);
-						b = EncryptK1(b);
+					// logged in state (k1 is not null)	
 										
 						int msgSize = b.length;
 						byte size = (byte)msgSize;
 						int numBlock = (int) Math.ceil((double)msgSize / 16.0f);
 						byte[] b16 = new byte[numBlock * 16];
 						System.arraycopy( b, 0, b16, 0, b.length );
-						//byte[] c = new byte[b.length + Ks.length+ 1];  // Concatenate Ks to the end of b
+						
+						byte[] dig = MD5(b16);					
+						byte[] MAC = EncryptK2(dig);
+						b16 = EncryptK1(b16);
+
 						byte[] c = new byte[1 + numBlock*16 + 16];
 						
 						c[0] =  size;
 						System.arraycopy(b16, 0, c, 1, b.length);
-						System.arraycopy(Ks, 0, c, c.length-16, 16);
+						System.arraycopy(MAC, 0, c, c.length-16, 16);
 						
-						b = EncryptKs(c);
-//						System.out.println("sending message data to server");
-						sendBytes(b);								
+						sendBytes(c);	
 					}
 				} catch (Exception e1) {
 					// TODO Auto-generated catch block
@@ -202,51 +243,7 @@ public class SecureChatClient {
 		});
 	}
 
-	/**
-	 * Prompt for and return the address of the server.
-	 * 
-	 * @return
-	 * @throws Exception 
-	 */
 
-	// if user is NOT logged in
-	public byte[] EncryptKs(byte[] b) throws Exception { 		
-//		BigInteger ciphertxt = new BigInteger(b);
-//		ciphertxt=ciphertxt.modPow(e,n);
-//		b=ciphertxt.toByteArray();				
-		return b;
-	}
-	
-	// if user is NOT logged in
-	public byte[] DecryptKs(byte[] b) throws Exception { 		
-//		BigInteger ciphertxt = new BigInteger(b);
-//		ciphertxt=ciphertxt.modPow(d,n);
-//		b=ciphertxt.toByteArray();				
-		return b;
-	}
-	
-
-	public byte[] EncryptK1(byte[] b) { // if user IS logged in
-		return b;
-	}
-	
-	public byte[] EncryptK2(byte[] b) { // if user IS logged in
-		return b;
-	}
-
-	private String getServerAddress() {
-		return (String) JOptionPane.showInputDialog(frame,
-				"Enter IP Address of the Server:", "Welcome to the Chatter",
-				JOptionPane.QUESTION_MESSAGE, null, null, "localhost");
-	}
-
-	/**
-	 * Prompt for and return the desired screen name.
-	 */
-	private String getName() {
-		return JOptionPane.showInputDialog(frame, "Choose a screen name:",
-				"Screen name selection", JOptionPane.PLAIN_MESSAGE);
-	}
 
 	/**
 	 * Connects to the server then enters the processing loop.
@@ -257,11 +254,9 @@ public class SecureChatClient {
 		byte[] data = null;
 		byte[] k1 = null;
 		byte[] k2 = null;
-		int lenOfmsg;
-		int lom;
+		int lom; //length of message
 		byte blom;
 		byte[] b16;
-		//byte[] Ks;
 		byte[] MAC;
 		
 		// Make connection and initialize streams
@@ -284,65 +279,76 @@ public class SecureChatClient {
 				dis.readFully(data);
 			}
 			
-			lenOfmsg = 0;
 			byte[] KsMD5in = new byte[16];
 			b16 = new byte[32];
 
 			blom = data[0];
-			System.arraycopy(data, 1, b16, 0, 32);
-			System.arraycopy(data, 33, KsMD5in, 0, 16);
+			byte d[] = new byte[data.length - 1];
+			System.arraycopy(data, 1, d, 0, data.length - 1);
+			
+			//use Ks to decode the login response
+			
+			System.arraycopy(d, 0, b16, 0, 32);
+			System.arraycopy(d, 32, KsMD5in, 0, 16);
 			
 			lom = (int) blom;			
 			k1 = new byte[16];
 			k2 = new byte[16];
 			
 			System.arraycopy(b16, 0, k1, 0, 16);
-			System.arraycopy(b16, 16, k2, 0, 16);
+			System.arraycopy(b16, 16, k2, 0, 16);			
 			
-			if(equalBytes(KsMD5in, MD5(Ks))){  
+			// *** KsMD5in = EncryptKs(KsMD5in, Ks);
+			// validates the login by matching the local MD5(Ks) with the MD5 generated on the server
+			if(equalBytes(KsMD5in, MD5(Ks))){ 
+				messageArea.append("login confirmed\n");
+				k1 = EncryptKs(k1, Ks); //decodes k1
+				k2 = EncryptKs(k2, Ks); //decodes k2
+				System.out.println("K1=" + new BigInteger(k1) + "  and k2=" + new BigInteger(k2));
 				setk1(k1);
 				setk2(k2);
 				loggedin = true;
-//				System.out.println("client is logged in");
-				messageArea.append("login confirmed\n");
 			}		
 		}
 
 		// Process all messages from server, according to the protocol.
-		while (true) {
-			// String line = in.readLine();
-//			System.out.println("client receiver waiting for dis.readInt()");
+		while (loggedin) {
 			len = dis.readInt();
 			data = new byte[len];
 			if (len > 0) {
 				dis.readFully(data);
 			}
 			
-			lenOfmsg = 0;
 			b16 = new byte[data.length - 17];
 			MAC = new byte[16];
 
 			blom = data[0];
+			lom = (int) blom;
 			System.arraycopy(data, 1, b16, 0, b16.length);
 			System.arraycopy(data, 1 + b16.length, MAC, 0, 16);
-			lom = (int) blom;
 			
-			
-			b16 = EncryptK1(b16); //decrypt b16
-			byte[] digMess = MD5(b16); //make digest
-			byte[] digMAC = EncryptK2(MAC); //decrypt digest
+			System.out.println("The encrypted message is:  " + new String(b16));		
+			b16 = EncryptK1(b16); //decrypt b16 first
+			//then 
+			byte[] b16MD5client = MD5(b16); //make digest
+			byte[] b16MD5server = EncryptK2(MAC); //decrypt digest
 			//compare
 			
-//			System.out.println("compare " + equalBytes(digMess, digMAC));
+//			System.out.println("compare " + equalBytes(b16MD5client, b16MD5server));
 //			System.out.println("b16 " + new String(b16));
+//			System.out.println("b16MD5client " + new String(b16MD5client));
+//			System.out.println("b16MD5server " + new String(b16MD5server));
 //			System.out.println("length of message " + lom);
 //			System.out.println("MAC " + new String(MAC));
-			
+//			
 			//decrypt using k1 and k2
 			//print to UI if MAC is valid
 			
-			messageArea.append(new String(b16) + "\n");
-					
+			if (equalBytes(b16MD5client, b16MD5server)){
+				byte[] b = new byte[lom];
+				System.arraycopy(b16, 0, b, 0, lom);
+				messageArea.append(new String(b) + "\n");
+			}
 		}
 	}
 
