@@ -27,47 +27,40 @@ class MsgPack {
 	}
 	
 	public void receiveData() throws IOException, NoSuchAlgorithmException{
-		System.out.println("enter receiveData");
-		
+//		System.out.println("receiveData() waiting for messages");
 		int len = dis.readInt();
-		System.out.println("len= " + len);
 		data = new byte[len];
 		if (len > 0) {
 			dis.readFully(data);
 		}
-		System.out.println("data read");
+//		System.out.println("receiveData() got data");
 		b16 = new byte[data.length - 17];
 		MAC = new byte[16];
 		
 		lom = (int) data[0];
 		System.arraycopy(data, 1, b16, 0, b16.length);
 		System.arraycopy(data, 1 + b16.length, MAC, 0, 16);
-		System.out.println("finished recive");
 	}
 	
-	public void receiveLogin(){
-		
-	}
-
 	public boolean validateMsg() throws NoSuchAlgorithmException{
+//		System.out.println("receiveData() validateMsg()");
+//		System.out.println("b16 encoded= " + new String(b16));
 		b16 = SecureChatClient.xorK1(b16); //decrypt b16 first
+//		System.out.println("b16 decoded= " + new String(b16));
 		message = new byte[lom];
 		System.arraycopy(b16, 0, message, 0, lom);
-		//then 
+		
+//		System.out.println("MAC= " + new String(MAC));
 		b16MD5client = SecureChatClient.MD5(b16); //make digest
+//		System.out.println("b16MD5client= " + new String(b16MD5client));
 		b16MD5server = SecureChatClient.xorK2(MAC); //decrypt digest
+//		System.out.println("b16MD5server= " + new String(b16MD5server));
+//		System.out.println("is valid= " + SecureChatClient.equalBytes(b16MD5client, b16MD5server));
 		return SecureChatClient.equalBytes(b16MD5client, b16MD5server);
 	}
 	
 	public boolean validateLogin(byte[] Ks) throws NoSuchAlgorithmException{
-		b16 = SecureChatClient.xorKs(b16, Ks); //decrypt b16 first
-		System.out.println("b16= " + new String(b16));
-		byte[] KsMD5client = SecureChatClient.MD5(Ks); //make a Ks digest
-		System.out.println("KsMD5client= " + new String(KsMD5client));
-		//b16MD5server = SecureChatClient.xorKs(MAC, Ks); //decrypt digest
-		System.out.println("MAC= " + new String(MAC));
-		System.out.println("== " + SecureChatClient.equalBytes(KsMD5client, MAC));
-		return SecureChatClient.equalBytes(KsMD5client, MAC);
+		return SecureChatClient.equalBytes(SecureChatClient.MD5(Ks), MAC);
 	}
 }
 
@@ -94,28 +87,6 @@ public class SecureChatClient {
 	public static BigInteger n = null;
 	public static Random rand = new Random();
 	
-
-	
-	public  void setk1(byte[] k1){
-		this.k1 = k1;
-	}
-	
-	public byte[] getk1(){
-		return k1;
-	}
-	
-	public void setk2(byte[] k2){
-		this.k2 = k2;
-	}
-	
-	public byte[] getk2(){
-		return k2;
-	}
-	
-	public byte[] getKs(){
-		return Ks;
-	}
-
 	public void KGen() {
 		Ks = BigInteger.probablePrime(127, rand).toByteArray();
 	}
@@ -134,6 +105,18 @@ public class SecureChatClient {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+	}
+	
+	public static byte[] encodePtoC(byte[] b){
+		BigInteger P = new BigInteger(1, b);	
+		BigInteger C = P.modPow(e, n);
+		return C.toByteArray();
+	}
+	
+	public static byte[] decodeCtoP(byte[] b){		
+		BigInteger C = new BigInteger(1, b);
+		BigInteger P = C.modPow(d, n);
+		return P.toByteArray();
 	}
 	
 	public static boolean equalBytes(byte[] a, byte[] b){
@@ -168,12 +151,12 @@ public class SecureChatClient {
 
 	//XOR encrypts and decrypts
 	public static byte[] xorKs(byte[] b, byte[] Ks) {
-		byte temp[] = new byte[16];
-		for(int i = 0; i<16; i++){
-			temp[i] = (byte) (b[i] ^ Ks[i]);
+		byte temp[] = new byte[b.length];
+		for(int i = 0; i<b.length; i++){
+			temp[i] = (byte) (b[i] ^ Ks[i%16]);
 		}
-		//return temp;
-		return b;
+		return temp;
+		//return b;
 	}
 	
 	//XOR encrypts and decrypts
@@ -183,28 +166,19 @@ public class SecureChatClient {
 			temp[i] = (byte) (b[i] ^ k1[i%16]);
 		}
 		return temp;
-		// return b;
+		//return b;
 	}
 	
 	//XOR encrypts and decrypts
 	public static byte[] xorK2(byte[] b) { // if user IS logged in
-		byte temp[] = new byte[16];
-		for(int i = 0; i<16; i++){
-			temp[i] = (byte) (b[i] ^ k2[i]);
+		byte temp[] = new byte[b.length];
+		for(int i = 0; i<b.length; i++){
+			temp[i] = (byte) (b[i] ^ k2[i%16]);
 		}
 		return temp;
 		//return b;
 	}
 	
-	// applies the public key to a message
-	public static byte[] usePU(byte[] b){
-		return b;
-	}
-	
-	// applies a private key to a message
-	public static byte[] usePR(byte[] b){
-		return b;
-	}
 	
 	/**
 	 * Prompt for and return the address of the server.
@@ -223,10 +197,12 @@ public class SecureChatClient {
 	 * Constructs the client by laying out the GUI and registering a listener
 	 * with the textfield so that pressing Return in the listener sends the
 	 * textfield contents to the server.
+	 * @throws Exception 
 	 */
-	public SecureChatClient() {
+	public SecureChatClient() throws Exception {
 		System.out.println("Secure chat room client.\n");
 		KGen(); // generates the random key Ks for this client
+		GetKeys();
 		// Layout GUI
 		textField.setEditable(true);
 		messageArea.setEditable(false);
@@ -242,50 +218,73 @@ public class SecureChatClient {
 			 * area in preparation for the next message.
 			 */			
 			public void actionPerformed(ActionEvent e) {
-				String send = textField.getText();
-				byte[] b = (send).getBytes();
+				String txt = textField.getText();
+				byte[] b = (txt).getBytes();
 				
 				// if k1 has not been set then the client still needs to login
 				try {
 					if (k1 == null) {// not logged in
 						String[] col = textField.getText().split(" ");
-						if(! col[0].equals("login")){
+						if(! col[0].equals("login") || col.length != 3 ){
 							messageArea.append(col[0] + "\nDenied. Please login first.\n");
 						} else {
 							messageArea.append(new String(b) + "\n");
 							System.out.print("The encrypted message (" + col[1] + " " + col[2] + " and the session key " + new BigInteger(Ks) +") is: ");
-							int msgSize = b.length;
-							byte size = (byte)msgSize;
-							int numBlock = (int) Math.ceil((double)msgSize / 16.0f);
-							byte[] b16 = new byte[numBlock * 16];
-							System.arraycopy( b, 0, b16, 0, b.length );	
+				
+							int msgSize = b.length + 16; //txt and Ks
+							byte size = (byte) msgSize;
 							
-							byte[] d = new byte[b16.length + 16];
-							System.arraycopy(b16, 0, d, 0, b16.length);
-							System.arraycopy(Ks, 0, d, b16.length, 16);
+							byte[] c = new byte[msgSize];
 							
-							d = usePU(d); //encrypts using server public key
-							System.out.println(new String(d));
+							System.arraycopy(b, 0, c, 0, b.length);
+							System.arraycopy(Ks, 0, c, b.length, 16);
 							
-							byte[] c = new byte[1 + d.length];				
-							c[0] =  size;
-							System.arraycopy(d, 0, c, 1, d.length);
-																		
-							sendBytes(c);
+							System.out.println(new String(c)); //part of content message
+
+							System.out.println("c pre encodePtoC=" + new String(c)+"="); 
+			c = encodePtoC(c);
+			
+			
+							// c is now very large
+							System.out.println("c post encodePtoC=" + new String(c) +"=");
+							
+							System.out.println("c decodeCtoP=" + new String(decodeCtoP(c))+"=");
+							
+							System.out.println("c.length= " + c.length);
+
+							byte[] d = new byte[c.length + 1];
+//							int cSz = c.length;
+//							byte bcSz = (byte) cSz;
+							d[0] = size;
+							System.arraycopy(c, 0, d, 1, c.length);
+							
+															
+							sendBytes(d);
 						}
-					} else {
+					} else { //this is the code that sends during main operation
 					// logged in state (k1 is not null)	
-										
+//						System.out.println("sending txt= " + new String(b)); 	
 						int msgSize = b.length;
 						byte size = (byte)msgSize;
 						int numBlock = (int) Math.ceil((double)msgSize / 16.0f);
 						byte[] b16 = new byte[numBlock * 16];
 						System.arraycopy( b, 0, b16, 0, b.length );
 						
+//						System.out.println("sending b16= " + new String(b16)); 
+						
 						byte[] dig = MD5(b16);					
 						byte[] MAC = xorK2(dig);
+								
+						
 						b16 = xorK1(b16);
+						
 
+//						System.out.println("sending b16.xorK1= " + new String(b16));
+//						System.out.println("k1= " + new String(k1));
+						
+//						System.out.println("b16.MD5= " + new String(dig));
+//						System.out.println("sending MAC= " + new String(MAC));
+						
 						byte[] c = new byte[1 + numBlock*16 + 16];
 						
 						c[0] =  size;
@@ -311,15 +310,9 @@ public class SecureChatClient {
 	 * @throws NoSuchAlgorithmException 
 	 */
 	private void run() throws IOException, NoSuchAlgorithmException {
-		int len;
-		byte[] data = null;
-		byte[] k1 = null;
-		byte[] k2 = null;
-		int lom; //length of message
-		byte blom;
-		byte[] b16;
-		byte[] MAC;
-		
+		//byte[] k1 = null;
+		//byte[] k2 = null;
+
 		// Make connection and initialize streams
 		String serverAddress = getServerAddress();
 		Socket socket = new Socket(serverAddress, 9001);
@@ -333,62 +326,27 @@ public class SecureChatClient {
 		boolean loggedin = false;
 		while(! loggedin){
 			MsgPack message = new MsgPack(dis);
-			System.out.println("calling receiveData()");
 			message.receiveData();
-			//catch response to login request
-//			System.out.println("client receiver waiting for login response dis.readInt()");
-//			len = dis.readInt();
-//			data = new byte[len];
-//			if (len > 0) {
-//				dis.readFully(data);
-//			}
-//			
-//			byte[] KsMD5in = new byte[16];
-//			b16 = new byte[32];
-//
-//			blom = data[0];
-//			byte d[] = new byte[data.length - 1];
-//			System.arraycopy(data, 1, d, 0, data.length - 1);
-//			
-//			//use Ks to decode the login response
-//			
-//			System.arraycopy(d, 0, b16, 0, 32);
-//			System.arraycopy(d, 32, KsMD5in, 0, 16);
-			
-//			lom = (int) blom;			
-//			k1 = new byte[16];
-//			k2 = new byte[16];
-//			
-////			System.arraycopy(message.b16, 0, k1, 0, 16);
-////			System.arraycopy(message.b16, 16, k2, 0, 16);	
-//			System.arraycopy(b16, 0, k1, 0, 16);
-//			System.arraycopy(b16, 16, k2, 0, 16);	
-//
-//			// validates the login by matching the local MD5(Ks) with the MD5 generated on the server
-//			if(equalBytes(KsMD5in, MD5(Ks))){ 
-//				messageArea.append("login confirmed\n");
-//				k1 = xorKs(k1, Ks); //decodes k1
-//				k2 = xorKs(k2, Ks); //decodes k2
-//				System.out.println("K1=" + new BigInteger(k1) + "  and k2=" + new BigInteger(k2));
-//				setk1(k1);
-//				setk2(k2);
-//				loggedin = true;
-//			}		
 			
 			if(message.validateLogin(Ks)){
 				k1 = new byte[16];
 				k2 = new byte[16];
 				System.arraycopy(message.b16, 0, k1, 0, 16);
 				System.arraycopy(message.b16, 16, k2, 0, 16);
+				k1 = xorKs(k1, Ks);	// decoding these values
+				k2 = xorKs(k2, Ks);
 				System.out.println("K1=" + new BigInteger(k1) + "  and k2=" + new BigInteger(k2));
-				setk1(k1);
-				setk2(k2);
-				loggedin = true;
+				loggedin = true;				
+				messageArea.append("login confirmed\n");
+				
+			} else {
+				messageArea.append("Login denied.\n");
 			}
 		}
 
 		// Receive messages from server and check for validity
 		while (loggedin) {
+//			System.out.println("logged in waiting for messages");
 			MsgPack message = new MsgPack(dis);
 			message.receiveData();
 					

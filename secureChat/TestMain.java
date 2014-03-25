@@ -2,6 +2,9 @@ package secureChat;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*; 
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.math.*;
 import java.nio.charset.Charset;
 
@@ -9,44 +12,105 @@ import javax.xml.bind.DatatypeConverter;
 
 public class TestMain {
 	
-	public static boolean equalBytes(byte[] a, byte[] b){
-		boolean pass = true;
-		for(int i = 0; i < a.length; i++) {
-			if(!a.equals(b)){
-				pass = false;
-				break;
-			}			
+	public static BigInteger ee = null;
+	public static BigInteger dd = null;
+	public static BigInteger nn = null;
+
+	
+	public static void GetKeys() throws Exception {
+		BufferedReader keys = new BufferedReader(new FileReader("pub_key.txt"));
+		try {
+			ee = new BigInteger(keys.readLine().replaceAll("\\s+", "")
+					.substring(2));
+			nn = new BigInteger(keys.readLine().replaceAll("\\s+", "")
+					.substring(2));
+			keys.close();
+			keys = new BufferedReader(new FileReader("pri_key.txt"));
+			dd = new BigInteger(keys.readLine().replaceAll("\\s+", "")
+					.substring(2));
+			keys.close();
+
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
-		return pass;
 	}
 	
-	public static byte[] MD5(byte[] b) throws NoSuchAlgorithmException{
-		MessageDigest m = MessageDigest.getInstance("MD5");
-		m.update(b);
-		return m.digest();
+	public static byte[] encodePtoC(byte[] b){
+		BigInteger P = new BigInteger(1, b);	
+//		System.out.println("P= " + P.toString());
+		BigInteger C = P.modPow(ee, nn);
+//		System.out.println("C= " + C.toString());
+		return C.toByteArray();
 	}
-
-	public static void main(String[] args) throws NoSuchAlgorithmException {
+	
+	
+	public static byte[] decodeCtoP(byte[] b){		
+		BigInteger C = new BigInteger(1, b);
+		BigInteger P = C.modPow(dd, nn);
+		return P.toByteArray();
+	}
+	
+	public static void main(String[] args) throws Exception {
+		GetKeys();
+//		System.out.println("n= " + n.toString());
+		System.out.println("ed= " + ee.toString());
+		System.out.println("dd= " + dd.toString());
 		
-		String[] n = new String[3];
-		n[0] = "a";
-		n[1] = "b";
-		n[1] = "c";
+		System.out.println("");
 		
+		byte[] w = "login a z".getBytes();
+		BigInteger bi = new BigInteger("121284081130085297547871328195069288767");
 		
-		String mess = "";
+		byte[] x = bi.toByteArray();
 		
-		for(int i = 1; i<n.length; i++){					
-			mess.concat(", " + n[i]);
-		}
+		System.out.println(bi);
+		System.out.println("x= " + new String(x));
 		
-		for(int i = 1; i<3; i++){					
-			mess.concat(", " + n[i]);
-		}
+		byte[] y = new byte[w.length + x.length];
+		System.arraycopy(w, 0, y, 0, w.length);
+		System.arraycopy(x, 0, y, w.length, x.length);
 		
-		String res = mess.concat("things");
-		System.out.println(res);
+		System.out.println("y= " + new String(y));
 		
+		System.out.println("");
+		
+		byte[] z = encodePtoC(y);
+		System.out.println("z= " + new String(z));
+		
+		System.out.println("");
+		
+		z = decodeCtoP(z);
+		System.out.println("z= " + new String(z));
+		
+//		//O»mˆ£È$×ë(?Sì4å".getBytes();
+//		System.out.println("a.length= " + a.length);
+//		System.out.println("a= " + new String(a));
+//		
+		System.out.println("");
+//		
+//		byte[] b = encodePtoC(a);
+//		System.out.println("b.length= " + b.length);	
+//		System.out.println("b= " + new String(b));
+//		
+//		System.out.println("");
+//		
+//		byte[] c = decodeCtoP(b);
+//		System.out.println("c= " + new String(c));
+//		
+//		System.out.println("+++++++++++++++++++++++++++++");
+		
+//		//byte[] d = "123456789 123456789 123456789 123456789 123456789 123456789 ".getBytes();
+//		byte[] d = "a long and winding sentence that goes nowhere but uses up a lot of space along the way. Because if 56 things the end of & rainbows can be encoded then the process is probably gong to be able to work!".getBytes();
+//		System.out.println("d.length= " + d.length);
+//		System.out.println("d= " + new String(d));
+//		
+//		byte[] e = encodePtoC(d);
+//		byte[] f = decodeCtoP(e);
+//		System.out.println("f= " + new String(f));
+		
+		//a long and winding sentence that goes nowhere but uses up a lot of space along the way. Because if 56 things @
+		// the end of & rainbows can be encoded then the process is probably gong to be able to work!
 //		###################################################################
 													
 //		byte[] byt = new byte[16];
