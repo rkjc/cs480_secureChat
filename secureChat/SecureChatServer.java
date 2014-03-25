@@ -358,13 +358,12 @@ public class SecureChatServer {
 			
 					// if message is valid broadcast to everyone
 					if (command.equals("send")) {
-						String cName = clientConnections.get(dos);
-						for (Entry<DataOutputStream, String> cData : clientConnections.entrySet()) {						    
-						   	String msg = cName.concat(": " + message.substring(5));
-						   	
-						   	System.out.println(msg);
-						   	System.out.println("The received encrypted message is: " + encryptM);
-						   	
+						String name = clientConnections.get(dos);
+						String msg = name.concat(": " + message.substring(5));
+					   	System.out.println(msg);
+					   	System.out.println("The received encrypted message is: " + encryptM);
+						
+						for (Entry<DataOutputStream, String> cData : clientConnections.entrySet()) {						  	
 						    sendByteData(msg, cData.getKey());
 						}
 						
@@ -387,33 +386,35 @@ public class SecureChatServer {
 						
 					    sendByteData(mess, dos);
 					    
-					} else if(command.equals("logout")){
+					} else if(command.equals("logout!")){
 						String cName = clientConnections.get(dos);
 						for (Entry<DataOutputStream, String> cData : clientConnections.entrySet()) {						    
-						   	message = cName.concat(" left");
-						    
+						   	message = cName.concat(" left");	    
 						    sendByteData(message, cData.getKey());
-						    k1 = null;
-						    k2 = null;
 						}
-						dos.close();
-						clientConnections.remove(dos);
-						break;
 					} else {
 						command = "";
 					}
 				}
-			} catch (IOException e) {
+			} catch (IOException | NoSuchAlgorithmException e) {
 				System.out.println(e);
-			} catch (NoSuchAlgorithmException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
 			} catch (Exception e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			} finally {
 				if (dos != null) {
-					clientConnections.remove(dos);
+					System.out.println(clientConnections.get(dos) + " logout.");
+					try {
+						name = clientConnections.get(dos);
+						clientConnections.remove(dos);
+						String msg = "";
+						for (Entry<DataOutputStream, String> cData : clientConnections.entrySet()) {
+						   	msg = name.concat(" left");
+							sendByteData(msg, cData.getKey());						
+						}															
+						dos.close();						
+					} catch (IOException | NoSuchAlgorithmException e) {
+						e.printStackTrace();
+					} 
 				}
 				try {
 					socket.close();

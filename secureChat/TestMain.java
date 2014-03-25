@@ -52,42 +52,60 @@ public class TestMain {
 	}
 	
 	public static void main(String[] args) throws Exception {
-		GetKeys();
-//		System.out.println("n= " + n.toString());
-		System.out.println("ed= " + ee.toString());
-		System.out.println("dd= " + dd.toString());
 		
-		System.out.println("");
+		String txt = "logout fun things)";
 		
-		byte[] w = "login a z".getBytes();
-		BigInteger bi = new BigInteger("121284081130085297547871328195069288767");
+		if(txt.substring(0, 6).equals("logout")){
+			System.out.println("logging out.\n");
+		} else {
+			System.out.println("nothing.\n");
+		}
 		
-		byte[] x = bi.toByteArray();
 		
-		System.out.println(bi);
-		System.out.println("x= " + new String(x));
 		
-		byte[] y = new byte[w.length + x.length];
-		System.arraycopy(w, 0, y, 0, w.length);
-		System.arraycopy(x, 0, y, w.length, x.length);
 		
-		System.out.println("y= " + new String(y));
 		
-		System.out.println("");
 		
-		byte[] z = encodePtoC(y);
-		System.out.println("z= " + new String(z));
 		
-		System.out.println("");
 		
-		z = decodeCtoP(z);
-		System.out.println("z= " + new String(z));
 		
-//		//O»mˆ£È$×ë(?Sì4å".getBytes();
-//		System.out.println("a.length= " + a.length);
-//		System.out.println("a= " + new String(a));
+		
+//		GetKeys();
+////		System.out.println("n= " + n.toString());
+//		System.out.println("ed= " + ee.toString());
+//		System.out.println("dd= " + dd.toString());
 //		
-		System.out.println("");
+//		System.out.println("");
+//		
+//		byte[] w = "login a z".getBytes();
+//		BigInteger bi = new BigInteger("121284081130085297547871328195069288767");
+//		
+//		byte[] x = bi.toByteArray();
+//		
+//		System.out.println(bi);
+//		System.out.println("x= " + new String(x));
+//		
+//		byte[] y = new byte[w.length + x.length];
+//		System.arraycopy(w, 0, y, 0, w.length);
+//		System.arraycopy(x, 0, y, w.length, x.length);
+//		
+//		System.out.println("y= " + new String(y));
+//		
+//		System.out.println("");
+//		
+//		byte[] z = encodePtoC(y);
+//		System.out.println("z= " + new String(z));
+//		
+//		System.out.println("");
+//		
+//		z = decodeCtoP(z);
+//		System.out.println("z= " + new String(z));
+//		
+////		//O»mˆ£È$×ë(?Sì4å".getBytes();
+////		System.out.println("a.length= " + a.length);
+////		System.out.println("a= " + new String(a));
+////		
+//		System.out.println("");
 //		
 //		byte[] b = encodePtoC(a);
 //		System.out.println("b.length= " + b.length);	
